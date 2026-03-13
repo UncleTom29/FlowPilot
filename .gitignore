@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Build outputs
+dist/
+build/
+frontend/dist/
+backend/dist/
+artifacts/
+cache/
+typechain-types/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Flow emulator
+flow.db/
+flowdb/
+emulator.log
+
+# Deployments (auto-generated)
+deployments/evm-deployments.json
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# TypeScript incremental
+*.tsbuildinfo
+
+# Coverage
+coverage/
