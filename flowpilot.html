@@ -1,0 +1,2407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlowPilot — Autonomous Finance OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080b10;
+  --bg2: #0d1117;
+  --bg3: #111820;
+  --bg4: #161e28;
+  --border: rgba(255,255,255,0.06);
+  --border2: rgba(255,255,255,0.12);
+  --text: #e8edf5;
+  --text2: #7a8899;
+  --text3: #4a5568;
+  --green: #00e5a0;
+  --green-dim: rgba(0,229,160,0.12);
+  --green-dim2: rgba(0,229,160,0.06);
+  --amber: #f5a623;
+  --amber-dim: rgba(245,166,35,0.12);
+  --blue: #4d9fff;
+  --blue-dim: rgba(77,159,255,0.12);
+  --coral: #ff6b6b;
+  --coral-dim: rgba(255,107,107,0.12);
+  --purple: #a78bfa;
+  --purple-dim: rgba(167,139,250,0.12);
+  --pink: #f472b6;
+  --pink-dim: rgba(244,114,182,0.12);
+  --r: 10px;
+  --r2: 14px;
+  --font-display: 'Syne', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+  --font-body: 'DM Sans', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ─── GRID NOISE OVERLAY ─── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+}
+
+/* ─── LAYOUT ─── */
+.app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; position: relative; z-index: 1; }
+
+/* ─── SIDEBAR ─── */
+.sidebar {
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.sidebar-logo {
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.logo-mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.logo-icon {
+  width: 32px;
+  height: 32px;
+  background: var(--green);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.logo-icon svg { width: 18px; height: 18px; }
+
+.logo-text {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.logo-sub {
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  letter-spacing: 0.05em;
+}
+
+.sidebar-user {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--green), var(--blue));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--bg);
+  flex-shrink: 0;
+}
+
+.user-info { flex: 1; min-width: 0; }
+.user-name { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-addr { font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
+
+.status-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse { 0%,100%{opacity:1;box-shadow:0 0 6px var(--green)} 50%{opacity:0.6;box-shadow:0 0 12px var(--green)} }
+
+.sidebar-nav { padding: 12px 0; flex: 1; }
+
+.nav-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text3);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 12px 20px 6px;
+  font-family: var(--font-mono);
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 20px;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 400;
+  border-left: 2px solid transparent;
+}
+
+.nav-item:hover { background: var(--bg3); color: var(--text); }
+.nav-item.active { background: var(--bg3); color: var(--text); border-left-color: var(--green); }
+.nav-item.active .nav-icon { color: var(--green); }
+
+.nav-icon { width: 16px; height: 16px; flex-shrink: 0; }
+.nav-badge { margin-left: auto; background: var(--green-dim); color: var(--green); font-size: 10px; font-family: var(--font-mono); padding: 2px 6px; border-radius: 99px; }
+.nav-badge.amber { background: var(--amber-dim); color: var(--amber); }
+
+.sidebar-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+}
+
+.gas-banner {
+  background: var(--green-dim2);
+  border: 1px solid rgba(0,229,160,0.15);
+  border-radius: var(--r);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gas-banner svg { width: 14px; height: 14px; color: var(--green); flex-shrink: 0; }
+.gas-text { font-size: 11px; color: var(--text2); }
+.gas-text strong { color: var(--green); }
+
+/* ─── MAIN CONTENT ─── */
+.main {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* ─── TOPBAR ─── */
+.topbar {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.page-title { font-family: var(--font-display); font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
+.page-subtitle { font-size: 12px; color: var(--text3); }
+
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--r);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+  font-family: var(--font-body);
+}
+
+.btn-primary { background: var(--green); color: var(--bg); }
+.btn-primary:hover { background: #00ffb3; transform: translateY(-1px); }
+.btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border2); }
+.btn-ghost:hover { background: var(--bg3); color: var(--text); }
+.btn-danger { background: var(--coral-dim); color: var(--coral); border: 1px solid rgba(255,107,107,0.2); }
+.btn-danger:hover { background: var(--coral); color: white; }
+.btn svg { width: 14px; height: 14px; }
+
+/* ─── CONTENT AREA ─── */
+.content { padding: 24px 28px; flex: 1; }
+
+/* ─── VIEWS ─── */
+.view { display: none; }
+.view.active { display: block; animation: fadeIn 0.2s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+
+/* ─── STAT CARDS ─── */
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+
+.stat-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.stat-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  border-radius: 99px 99px 0 0;
+}
+
+.stat-card.green::after { background: var(--green); }
+.stat-card.amber::after { background: var(--amber); }
+.stat-card.blue::after { background: var(--blue); }
+.stat-card.purple::after { background: var(--purple); }
+
+.stat-card:hover { border-color: var(--border2); }
+.stat-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--font-mono); margin-bottom: 8px; }
+.stat-value { font-size: 26px; font-family: var(--font-mono); font-weight: 700; letter-spacing: -1px; margin-bottom: 4px; }
+.stat-value.green { color: var(--green); }
+.stat-value.amber { color: var(--amber); }
+.stat-value.blue { color: var(--blue); }
+.stat-value.purple { color: var(--purple); }
+.stat-sub { font-size: 11px; color: var(--text3); }
+.stat-sub.up { color: var(--green); }
+.stat-sub.down { color: var(--coral); }
+
+/* ─── TWO-COLUMN LAYOUT ─── */
+.two-col { display: grid; grid-template-columns: 1fr 360px; gap: 16px; margin-bottom: 20px; }
+.three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+
+/* ─── CARDS ─── */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-title { font-family: var(--font-display); font-size: 14px; font-weight: 700; letter-spacing: -0.2px; }
+.card-title-row { display: flex; align-items: center; gap: 8px; }
+
+.card-body { padding: 20px; }
+.card-body.compact { padding: 12px; }
+
+/* ─── LIVE TICKER ─── */
+.ticker-display {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 24px;
+  margin-bottom: 16px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.ticker-display::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(0,229,160,0.06), transparent 60%);
+  pointer-events: none;
+}
+
+.ticker-label { font-size: 11px; color: var(--text3); font-family: var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+
+.ticker-value {
+  font-family: var(--font-mono);
+  font-size: 42px;
+  font-weight: 700;
+  color: var(--green);
+  letter-spacing: -2px;
+  line-height: 1;
+  margin-bottom: 6px;
+  transition: color 0.3s;
+}
+
+.ticker-rate { font-size: 13px; color: var(--text2); font-family: var(--font-mono); }
+.ticker-rate span { color: var(--green); }
+
+.ticker-pills { display: flex; gap: 8px; justify-content: center; margin-top: 16px; }
+
+.ticker-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--bg4);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 10px 20px;
+  min-width: 110px;
+}
+
+.tp-label { font-size: 10px; color: var(--text3); font-family: var(--font-mono); letter-spacing: 0.05em; margin-bottom: 4px; }
+.tp-val { font-size: 16px; font-family: var(--font-mono); font-weight: 700; }
+.tp-val.green { color: var(--green); }
+.tp-val.amber { color: var(--amber); }
+.tp-val.blue { color: var(--blue); }
+
+/* ─── RULES ─── */
+.rules-list { display: flex; flex-direction: column; gap: 8px; }
+
+.rule-item {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  transition: all 0.15s;
+  cursor: pointer;
+}
+
+.rule-item:hover { border-color: var(--border2); background: var(--bg4); }
+
+.rule-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  margin-top: 6px; flex-shrink: 0;
+}
+
+.rule-content { flex: 1; min-width: 0; }
+.rule-text { font-size: 13px; color: var(--text); margin-bottom: 3px; font-weight: 400; }
+.rule-meta { font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
+
+.rule-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 99px;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.rb-green { background: var(--green-dim); color: var(--green); }
+.rb-blue { background: var(--blue-dim); color: var(--blue); }
+.rb-amber { background: var(--amber-dim); color: var(--amber); }
+.rb-purple { background: var(--purple-dim); color: var(--purple); }
+.rb-coral { background: var(--coral-dim); color: var(--coral); }
+.rb-pink { background: var(--pink-dim); color: var(--pink); }
+
+/* ─── RULE STATUS INDICATOR ─── */
+.rule-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+}
+
+.rs-dot { width: 5px; height: 5px; border-radius: 50%; }
+.rs-active .rs-dot { background: var(--green); box-shadow: 0 0 4px var(--green); }
+.rs-pending .rs-dot { background: var(--amber); }
+.rs-paused .rs-dot { background: var(--text3); }
+.rs-active { color: var(--green); }
+.rs-pending { color: var(--amber); }
+.rs-paused { color: var(--text3); }
+
+/* ─── ADD RULE INPUT ─── */
+.add-rule-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg3);
+  border: 1px dashed var(--border2);
+  border-radius: var(--r);
+  padding: 12px 16px;
+  transition: all 0.2s;
+  cursor: text;
+  margin-top: 8px;
+}
+
+.add-rule-input:hover, .add-rule-input:focus-within { border-color: var(--green); background: var(--bg4); }
+
+.add-rule-input input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text);
+  min-width: 0;
+}
+
+.add-rule-input input::placeholder { color: var(--text3); }
+
+/* ─── PROGRESS BAR ─── */
+.progress-bar { background: var(--bg4); border-radius: 99px; height: 4px; overflow: hidden; margin: 6px 0; }
+.progress-fill { height: 100%; border-radius: 99px; transition: width 1s ease; }
+.pf-green { background: var(--green); }
+.pf-amber { background: var(--amber); }
+.pf-blue { background: var(--blue); }
+.pf-purple { background: var(--purple); }
+
+/* ─── TABLE ─── */
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th { font-size: 11px; color: var(--text3); font-family: var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); font-weight: 400; }
+.data-table td { padding: 12px 12px; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text); }
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: var(--bg3); }
+.data-table .mono { font-family: var(--font-mono); font-size: 12px; }
+.data-table .green { color: var(--green); }
+.data-table .amber { color: var(--amber); }
+.data-table .coral { color: var(--coral); }
+
+/* ─── MINI CHART ─── */
+.mini-chart { height: 48px; position: relative; overflow: hidden; }
+.mini-chart svg { width: 100%; height: 100%; }
+
+/* ─── LOTTERY WIDGET ─── */
+.lottery-card {
+  background: linear-gradient(135deg, var(--bg3), var(--bg4));
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 24px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.lottery-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 100%, rgba(245,166,35,0.08), transparent 60%);
+  pointer-events: none;
+}
+
+.lottery-jackpot { font-family: var(--font-mono); font-size: 36px; font-weight: 700; color: var(--amber); letter-spacing: -1.5px; margin: 8px 0 4px; }
+.lottery-apy { font-size: 12px; color: var(--text2); margin-bottom: 16px; }
+
+.lottery-countdown {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.cd-block {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  min-width: 52px;
+  text-align: center;
+}
+
+.cd-num { font-family: var(--font-mono); font-size: 20px; font-weight: 700; color: var(--amber); line-height: 1; }
+.cd-unit { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; }
+
+.lottery-winners { margin-top: 16px; display: flex; flex-direction: column; gap: 6px; }
+.winner-row { display: flex; align-items: center; justify-content: space-between; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
+.winner-addr { font-family: var(--font-mono); font-size: 11px; color: var(--text2); }
+.winner-amount { font-family: var(--font-mono); font-size: 12px; color: var(--amber); font-weight: 700; }
+
+/* ─── GIFT CARDS ─── */
+.gift-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+
+.gift-card {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.gift-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+
+.gift-card::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  transform: translate(30px, -30px);
+  opacity: 0.08;
+}
+
+.gc-purple::before { background: var(--purple); }
+.gc-green::before { background: var(--green); }
+.gc-pink::before { background: var(--pink); }
+.gc-blue::before { background: var(--blue); }
+
+.gift-tag { font-size: 10px; font-family: var(--font-mono); color: var(--text3); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 12px; }
+.gift-amount { font-family: var(--font-mono); font-size: 28px; font-weight: 700; color: var(--text); letter-spacing: -1px; margin-bottom: 4px; }
+.gift-yield { font-size: 12px; margin-bottom: 12px; }
+.gift-to { font-size: 12px; color: var(--text2); }
+.gift-to strong { color: var(--text); }
+.gift-message { font-size: 12px; color: var(--text3); font-style: italic; margin-top: 4px; }
+.gift-date { font-size: 11px; color: var(--text3); font-family: var(--font-mono); margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+/* ─── CREDENTIAL CARD ─── */
+.credential {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.credential::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--green), var(--blue), var(--purple));
+}
+
+.cred-header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+.cred-avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, var(--green), var(--blue)); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 800; font-size: 16px; color: var(--bg); flex-shrink: 0; }
+.cred-name { font-family: var(--font-display); font-size: 18px; font-weight: 700; color: var(--text); }
+.cred-role { font-size: 12px; color: var(--text2); }
+
+.cred-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+.cred-stat { background: var(--bg4); border-radius: 8px; padding: 12px; text-align: center; }
+.cred-stat-val { font-family: var(--font-mono); font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.cred-stat-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; }
+
+.credit-score-bar { margin-bottom: 20px; }
+.cs-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.cs-label { font-size: 11px; color: var(--text3); }
+.cs-value { font-family: var(--font-mono); font-size: 20px; font-weight: 700; color: var(--green); }
+
+/* ─── PORTFOLIO ─── */
+.allocation-list { display: flex; flex-direction: column; gap: 10px; }
+
+.alloc-row { display: flex; flex-direction: column; gap: 4px; }
+.alloc-header { display: flex; justify-content: space-between; align-items: center; }
+.alloc-asset { font-size: 13px; color: var(--text); font-weight: 500; }
+.alloc-pct { font-family: var(--font-mono); font-size: 13px; font-weight: 700; }
+
+/* ─── SUBSCRIPTION ─── */
+.sub-item {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: all 0.15s;
+}
+
+.sub-item:hover { border-color: var(--border2); }
+
+.sub-icon {
+  width: 38px; height: 38px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+
+.sub-content { flex: 1; min-width: 0; }
+.sub-name { font-size: 13px; font-weight: 500; color: var(--text); }
+.sub-payee { font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
+.sub-amount { font-family: var(--font-mono); font-size: 15px; font-weight: 700; color: var(--text); }
+.sub-next { font-size: 11px; color: var(--text3); text-align: right; }
+
+/* ─── MODAL ─── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 520px;
+  transform: translateY(20px) scale(0.97);
+  transition: transform 0.2s;
+  overflow: hidden;
+}
+
+.modal-overlay.open .modal { transform: translateY(0) scale(1); }
+
+.modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-title { font-family: var(--font-display); font-size: 16px; font-weight: 700; }
+
+.modal-close {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--bg3); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.15s; color: var(--text2);
+}
+
+.modal-close:hover { background: var(--coral-dim); color: var(--coral); border-color: rgba(255,107,107,0.3); }
+
+.modal-body { padding: 24px; }
+
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; font-family: var(--font-mono); margin-bottom: 6px; }
+
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--text);
+  font-family: var(--font-body);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--green); }
+.form-select { appearance: none; cursor: pointer; }
+.form-textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+
+.nl-preview {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 12px 14px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text2);
+  display: none;
+}
+
+.nl-preview.visible { display: block; }
+.nl-preview .nl-understood { color: var(--green); font-weight: 500; }
+
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* ─── NOTIFICATION TOAST ─── */
+.toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 2000; display: flex; flex-direction: column; gap: 8px; }
+
+.toast {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 260px;
+  max-width: 360px;
+  animation: slideIn 0.2s ease;
+  transition: opacity 0.2s;
+}
+
+@keyframes slideIn { from{transform:translateX(100px);opacity:0} to{transform:translateX(0);opacity:1} }
+
+.toast-icon { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.toast.success .toast-icon { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.toast.info .toast-icon { background: var(--blue); }
+.toast.warning .toast-icon { background: var(--amber); }
+.toast-text { font-size: 13px; color: var(--text); }
+.toast-text strong { display: block; font-weight: 500; }
+.toast-text span { font-size: 12px; color: var(--text2); }
+
+/* ─── SECTION DIVIDER ─── */
+.section-divider { display: flex; align-items: center; gap: 12px; margin: 20px 0 16px; }
+.sd-label { font-family: var(--font-display); font-size: 14px; font-weight: 700; white-space: nowrap; }
+.sd-line { flex: 1; height: 1px; background: var(--border); }
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* ─── SWITCHER TABS ─── */
+.tab-row { display: flex; gap: 4px; background: var(--bg3); border-radius: var(--r); padding: 4px; margin-bottom: 16px; }
+.tab-btn { padding: 7px 16px; border-radius: 7px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; background: none; color: var(--text2); transition: all 0.15s; font-family: var(--font-body); }
+.tab-btn.active { background: var(--bg); color: var(--text); }
+
+/* ─── EMPTY STATE ─── */
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text3); }
+.empty-state svg { width: 40px; height: 40px; margin-bottom: 12px; opacity: 0.3; }
+.empty-state p { font-size: 13px; }
+
+/* ─── INLINE SPARKLINE ─── */
+.sparkline { display: inline-flex; align-items: center; gap: 1px; height: 20px; }
+.spark-bar { width: 3px; border-radius: 1px; background: var(--green); opacity: 0.6; }
+
+/* ─── APY BADGE ─── */
+.apy-badge { display: inline-flex; align-items: center; gap: 4px; background: var(--green-dim); color: var(--green); font-size: 11px; font-family: var(--font-mono); padding: 3px 8px; border-radius: 99px; }
+.apy-badge::before { content: '▲'; font-size: 8px; }
+
+/* ─── SEPARATOR ─── */
+hr.sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+/* ─── CHAIN ACTIVITY ─── */
+.activity-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.activity-item:last-child { border-bottom: none; }
+.activity-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.activity-content { flex: 1; min-width: 0; }
+.activity-title { font-size: 12px; color: var(--text); }
+.activity-hash { font-size: 10px; color: var(--text3); font-family: var(--font-mono); }
+.activity-amount { font-family: var(--font-mono); font-size: 12px; font-weight: 700; }
+.activity-time { font-size: 10px; color: var(--text3); }
+
+/* ─── SWITCH TOGGLE ─── */
+.switch { position: relative; width: 36px; height: 20px; cursor: pointer; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch-track { position: absolute; inset: 0; background: var(--bg4); border-radius: 10px; border: 1px solid var(--border2); transition: 0.2s; }
+.switch input:checked + .switch-track { background: var(--green-dim); border-color: rgba(0,229,160,0.3); }
+.switch-thumb { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--text3); transition: 0.2s; }
+.switch input:checked ~ .switch-thumb, .switch:has(input:checked) .switch-thumb { left: 18px; background: var(--green); box-shadow: 0 0 6px rgba(0,229,160,0.5); }
+
+/* ─── HEADER ACCENT ─── */
+.view-header { margin-bottom: 20px; }
+.view-header h1 { font-family: var(--font-display); font-size: 22px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+.view-header p { font-size: 13px; color: var(--text2); }
+
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">
+        <div class="logo-icon">
+          <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 2L15 5.5V12.5L9 16L3 12.5V5.5L9 2Z" fill="#080b10"/>
+            <path d="M9 5L12 6.8V10.2L9 12L6 10.2V6.8L9 5Z" fill="#080b10" opacity="0.5"/>
+          </svg>
+        </div>
+        <div class="logo-text">FlowPilot</div>
+      </div>
+      <div class="logo-sub">v2.0 · TESTNET</div>
+    </div>
+
+    <div class="sidebar-user">
+      <div class="user-avatar">AO</div>
+      <div class="user-info">
+        <div class="user-name">Amaka Obi</div>
+        <div class="user-addr">amaka.flow</div>
+      </div>
+      <div class="status-dot" title="Active stream"></div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Overview</div>
+      <div class="nav-item active" onclick="navigate('dashboard')">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1" stroke-width="1.5"/><rect x="14" y="3" width="7" height="7" rx="1" stroke-width="1.5"/><rect x="3" y="14" width="7" height="7" rx="1" stroke-width="1.5"/><rect x="14" y="14" width="7" height="7" rx="1" stroke-width="1.5"/></svg>
+        Dashboard
+        <span class="nav-badge">Live</span>
+      </div>
+      <div class="nav-item" onclick="navigate('stream')">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.5" d="M12 2v20M2 12h20M7 7l10 10M17 7L7 17"/></svg>
+        Payroll Stream
+      </div>
+
+      <div class="nav-section-label">Autopilot Rules</div>
+      <div class="nav-item" onclick="navigate('rules')">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.5" d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg>
+        Rules Engine
+        <span class="nav-badge">6</span>
+      </div>
+      <div class="nav-item" onclick="navigate('yield')">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline stroke-width="1.5" points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline stroke-width="1.5" points="16 7 22 7 22 13"/></svg>
+        Yield Autopilot
+      </div>
+      <div class="nav-item" onclick="navigate('dca')">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="1.5"/><path stroke-width="1.5" d="M12 6v6l4 2"/></svg>
+        DCA + Savings
+      </div>
+      <div class="nav-item" onclick="navigate('portfolio')">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.5" d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        AI Portfolio
+      </div>
+
+      <div class="nav-section-label">Features</div>
+      <div class="nav-item" onclick="navigate('subscriptions')">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2" stroke-width="1.5"/><path stroke-width="1.5" d="M2 10h20"/></svg>
+        Subscriptions
+      </div>
+      <div class="nav-item" onclick="navigate('lottery')">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="1.5"/><path stroke-width="1.5" d="M8 12l3 3 5-5"/></svg>
+        Lottery Pool
+        <span class="nav-badge amber">Draw soon</span>
+      </div>
+      <div class="nav-item" onclick="navigate('giftcards')">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.5" d="M20 12v10H4V12M22 7H2v5h20V7zM12 22V7M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg>
+        Gift Cards
+      </div>
+      <div class="nav-item" onclick="navigate('credential')">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" stroke-width="1.5"/><path stroke-width="1.5" d="M16 3H8a2 2 0 00-2 2v2h12V5a2 2 0 00-2-2z"/><circle cx="12" cy="14" r="2" stroke-width="1.5"/></svg>
+        WorkCredential
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="gas-banner">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.5" d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        <div class="gas-text"><strong>Gas-free</strong> — all transactions sponsored by FlowPilot</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══ MAIN ═══ -->
+  <main class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div>
+        <div class="page-title" id="pageTitle">Dashboard</div>
+        <div class="page-subtitle" id="pageSubtitle">Your autonomous finance overview</div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-ghost" onclick="showWithdrawModal()">
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.5" d="M12 5v14m0 0l-4-4m4 4l4-4"/></svg>
+          Withdraw
+        </button>
+        <button class="btn btn-primary" onclick="showAddRuleModal()">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 5v14M5 12h14"/></svg>
+          Add Rule
+        </button>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content">
+
+      <!-- ═══ DASHBOARD VIEW ═══ -->
+      <div class="view active" id="view-dashboard">
+
+        <div class="stats-grid">
+          <div class="stat-card green">
+            <div class="stat-label">Total Balance</div>
+            <div class="stat-value green" id="totalBalance">$4,218.63</div>
+            <div class="stat-sub up">↑ +$87.44 today</div>
+          </div>
+          <div class="stat-card amber">
+            <div class="stat-label">Yield Earned</div>
+            <div class="stat-value amber" id="yieldEarned">$342.18</div>
+            <div class="stat-sub">8.4% APY avg.</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="stat-label">Active Rules</div>
+            <div class="stat-value blue">6</div>
+            <div class="stat-sub up">All running</div>
+          </div>
+          <div class="stat-card purple">
+            <div class="stat-label">Savings Vault</div>
+            <div class="stat-value purple" id="savingsVault">$1,840.22</div>
+            <div class="stat-sub">6-month goal</div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <!-- Live Ticker -->
+          <div>
+            <div class="ticker-display">
+              <div class="ticker-label">Earning right now</div>
+              <div class="ticker-value" id="mainTicker">$0.0000</div>
+              <div class="ticker-rate"><span id="perSecRate">$0.00891</span>/sec · salary + yield</div>
+              <div class="ticker-pills">
+                <div class="ticker-pill">
+                  <div class="tp-label">Salary</div>
+                  <div class="tp-val green" id="salaryPill">$2,037.23</div>
+                </div>
+                <div class="ticker-pill">
+                  <div class="tp-label">Yield</div>
+                  <div class="tp-val amber" id="yieldPill">$189.44</div>
+                </div>
+                <div class="ticker-pill">
+                  <div class="tp-label">Savings</div>
+                  <div class="tp-val blue" id="savingsPill">$1,840.22</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Active Rules Preview -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title-row">
+                  <div class="card-title">Active Rules</div>
+                </div>
+                <button class="btn btn-ghost" style="font-size:12px;padding:5px 10px" onclick="navigate('rules')">View all</button>
+              </div>
+              <div class="card-body compact">
+                <div class="rules-list" id="dashRulesList"></div>
+                <div class="add-rule-input" onclick="showAddRuleModal()">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:var(--text3);flex-shrink:0"><path stroke-width="2" d="M12 5v14M5 12h14"/></svg>
+                  <input type="text" placeholder="Add a rule in plain English..." readonly>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right column -->
+          <div style="display:flex;flex-direction:column;gap:16px;">
+
+            <!-- Stream status -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">Stream Status</div>
+                <div class="rule-status rs-active">
+                  <div class="rs-dot"></div>
+                  <span>Active</span>
+                </div>
+              </div>
+              <div class="card-body">
+                <div style="margin-bottom:12px">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                    <span style="font-size:12px;color:var(--text3)">Monthly progress</span>
+                    <span style="font-family:var(--font-mono);font-size:12px;color:var(--text2)">Day 14 / 30</span>
+                  </div>
+                  <div class="progress-bar"><div class="progress-fill pf-green" style="width:47%"></div></div>
+                  <div style="display:flex;justify-content:space-between;margin-top:4px">
+                    <span style="font-size:11px;color:var(--text3)">$2,037 accrued</span>
+                    <span style="font-size:11px;color:var(--text3)">$2,000 remaining</span>
+                  </div>
+                </div>
+                <hr class="sep">
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <div style="display:flex;justify-content:space-between;align-items:center">
+                    <span style="font-size:12px;color:var(--text2)">Rate</span>
+                    <span style="font-family:var(--font-mono);font-size:12px;color:var(--text)">$0.00772/sec</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;align-items:center">
+                    <span style="font-size:12px;color:var(--text2)">Employer</span>
+                    <span style="font-family:var(--font-mono);font-size:12px;color:var(--text)">techcorp.flow</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;align-items:center">
+                    <span style="font-size:12px;color:var(--text2)">Next milestone</span>
+                    <span style="font-size:12px;color:var(--amber)">16d 4h 22m</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;align-items:center">
+                    <span style="font-size:12px;color:var(--text2)">Yield split</span>
+                    <span style="font-size:12px;color:var(--text)">80% / 20%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Lottery widget -->
+            <div class="lottery-card">
+              <div class="stat-label" style="color:var(--text3)">Lossless Lottery Pool</div>
+              <div class="lottery-jackpot" id="lotteryAmount">$1,247.88</div>
+              <div class="lottery-apy"><span class="apy-badge">8.4% APY</span> funding prize daily</div>
+              <div class="lottery-countdown">
+                <div class="cd-block"><div class="cd-num" id="cdHours">06</div><div class="cd-unit">hrs</div></div>
+                <div class="cd-block"><div class="cd-num" id="cdMins">14</div><div class="cd-unit">min</div></div>
+                <div class="cd-block"><div class="cd-num" id="cdSecs">33</div><div class="cd-unit">sec</div></div>
+              </div>
+              <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="navigate('lottery')">
+                View Lottery Pool →
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- On-chain activity -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">On-chain Activity</div>
+            <div style="font-size:11px;color:var(--text3);font-family:var(--font-mono)">Flow Testnet</div>
+          </div>
+          <div class="card-body compact">
+            <div id="activityList"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ═══ PAYROLL STREAM VIEW ═══ -->
+      <div class="view" id="view-stream">
+        <div class="view-header">
+          <h1>Payroll Stream</h1>
+          <p>Per-second salary disbursement with milestone gating and work verification</p>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card green">
+            <div class="stat-label">Salary Accrued</div>
+            <div class="stat-value green">$2,037.23</div>
+            <div class="stat-sub up">$0.00772/sec</div>
+          </div>
+          <div class="stat-card amber">
+            <div class="stat-label">Yield on Float</div>
+            <div class="stat-value amber">$189.44</div>
+            <div class="stat-sub">80% to you</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="stat-label">Stream Health</div>
+            <div class="stat-value blue">100%</div>
+            <div class="stat-sub up">No disputes</div>
+          </div>
+          <div class="stat-card purple">
+            <div class="stat-label">Milestones</div>
+            <div class="stat-value purple">7</div>
+            <div class="stat-sub up">7 completed</div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div style="display:flex;flex-direction:column;gap:16px">
+
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">Stream Timeline</div>
+                <span class="rule-status rs-active"><div class="rs-dot"></div>Streaming</span>
+              </div>
+              <div class="card-body">
+                <div style="display:flex;flex-direction:column;gap:14px" id="milestoneTimeline"></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">Tri-Ledger Breakdown</div>
+              </div>
+              <div class="card-body">
+                <div style="display:flex;flex-direction:column;gap:14px">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                      <span style="font-size:13px;color:var(--text2)">Ledger A — Salary accrued</span>
+                      <span style="font-family:var(--font-mono);font-size:14px;color:var(--green);font-weight:700">$2,037.23</span>
+                    </div>
+                    <div class="progress-bar"><div class="progress-fill pf-green" style="width:51%"></div></div>
+                  </div>
+                  <div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                      <span style="font-size:13px;color:var(--text2)">Ledger B — Yield principal deployed</span>
+                      <span style="font-family:var(--font-mono);font-size:14px;color:var(--blue);font-weight:700">$3,962.77</span>
+                    </div>
+                    <div class="progress-bar"><div class="progress-fill pf-blue" style="width:99%"></div></div>
+                  </div>
+                  <div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                      <span style="font-size:13px;color:var(--text2)">Ledger C — Yield earned (your 80%)</span>
+                      <span style="font-family:var(--font-mono);font-size:14px;color:var(--amber);font-weight:700">$189.44</span>
+                    </div>
+                    <div class="progress-bar"><div class="progress-fill pf-amber" style="width:5%"></div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div class="card">
+              <div class="card-header"><div class="card-title">Stream Details</div></div>
+              <div class="card-body">
+                <div style="display:flex;flex-direction:column;gap:10px;font-size:13px">
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Employer</span><span style="font-family:var(--font-mono);color:var(--text)">techcorp.flow</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Monthly salary</span><span style="font-family:var(--font-mono);color:var(--green)">$4,000.00</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Rate per second</span><span style="font-family:var(--font-mono);color:var(--text)">$0.00154/s</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Yield split (you)</span><span style="color:var(--green)">80%</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Protocol fee</span><span style="color:var(--text2)">0.3% of stream</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Stream start</span><span style="font-family:var(--font-mono);color:var(--text)">Mar 1, 2026</span></div>
+                  <hr class="sep">
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Claimable now</span><span style="font-family:var(--font-mono);color:var(--green);font-weight:700">$2,226.67</span></div>
+                </div>
+                <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:16px" onclick="showWithdrawModal()">Withdraw Earnings</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><div class="card-title">Work Proof Oracle</div></div>
+              <div class="card-body">
+                <div style="background:var(--bg3);border-radius:8px;padding:12px;font-family:var(--font-mono);font-size:11px;color:var(--text2);margin-bottom:12px">
+                  <div style="color:var(--text3);margin-bottom:4px">// WorkProofVerifier.sol</div>
+                  <div>milestone: <span style="color:var(--green)">0x7f3a...</span></div>
+                  <div>workHash: <span style="color:var(--blue)">0x4d8c...</span></div>
+                  <div>verified: <span style="color:var(--green)">true</span></div>
+                  <div>timestamp: <span style="color:var(--amber)">1743200000</span></div>
+                </div>
+                <button class="btn btn-ghost" style="width:100%;justify-content:center;font-size:12px" onclick="showToast('Work proof submitted to Flow EVM oracle', 'success')">Submit Work Proof</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ RULES ENGINE VIEW ═══ -->
+      <div class="view" id="view-rules">
+        <div class="view-header">
+          <h1>Rules Engine</h1>
+          <p>Set financial rules in plain English. FlowPilot compiles them into autonomous on-chain actions.</p>
+        </div>
+
+        <div class="two-col">
+          <div>
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">Active Rules (6)</div>
+                <button class="btn btn-primary" style="font-size:12px;padding:6px 12px" onclick="showAddRuleModal()">+ Add Rule</button>
+              </div>
+              <div class="card-body compact">
+                <div class="rules-list" id="fullRulesList"></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div class="card">
+              <div class="card-header"><div class="card-title">NL Compiler</div></div>
+              <div class="card-body">
+                <div class="form-group">
+                  <label class="form-label">Plain English Input</label>
+                  <textarea class="form-textarea" id="nlInput" placeholder="e.g. save 20% of every paycheck into my vault" oninput="parseNL(this.value)"></textarea>
+                </div>
+                <div class="nl-preview" id="nlPreview"></div>
+                <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">
+                  <div style="font-size:11px;color:var(--text3);font-family:var(--font-mono);margin-bottom:4px">EXAMPLE RULES</div>
+                  <div class="rule-item" style="cursor:pointer;padding:8px 12px" onclick="setExample('save 20% of every paycheck into my vault')"><div class="rule-text" style="font-size:12px">"save 20% of every paycheck into my vault"</div></div>
+                  <div class="rule-item" style="cursor:pointer;padding:8px 12px" onclick="setExample('buy $50 of FLOW every Friday')"><div class="rule-text" style="font-size:12px">"buy $50 of FLOW every Friday"</div></div>
+                  <div class="rule-item" style="cursor:pointer;padding:8px 12px" onclick="setExample('pay $800 to landlord.flow on the 1st of each month')"><div class="rule-text" style="font-size:12px">"pay $800 to landlord.flow on the 1st of each month"</div></div>
+                  <div class="rule-item" style="cursor:pointer;padding:8px 12px" onclick="setExample('round up every withdrawal to the nearest $10')"><div class="rule-text" style="font-size:12px">"round up every withdrawal to the nearest $10"</div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><div class="card-title">Flow Actions Graph</div></div>
+              <div class="card-body">
+                <div style="background:var(--bg3);border-radius:8px;padding:14px;font-family:var(--font-mono);font-size:11px;color:var(--text2)" id="flowActionsOutput">
+                  <div style="color:var(--text3)">// Awaiting rule input...</div>
+                  <div style="margin-top:8px;color:var(--text3)">// Flow Actions graph will appear here</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ YIELD AUTOPILOT VIEW ═══ -->
+      <div class="view" id="view-yield">
+        <div class="view-header">
+          <h1>Yield Autopilot</h1>
+          <p>Autonomous yield routing and auto-restaking across Flow DeFi protocols</p>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card green">
+            <div class="stat-label">Total Yield Earned</div>
+            <div class="stat-value green">$342.18</div>
+            <div class="stat-sub up">+$12.44 today</div>
+          </div>
+          <div class="stat-card amber">
+            <div class="stat-label">Current APY</div>
+            <div class="stat-value amber">8.4%</div>
+            <div class="stat-sub up">↑ 0.2% vs yesterday</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="stat-label">Principal Deployed</div>
+            <div class="stat-value blue">$3,962</div>
+            <div class="stat-sub">Across 2 protocols</div>
+          </div>
+          <div class="stat-card purple">
+            <div class="stat-label">Last Rebalance</div>
+            <div class="stat-value purple">6h</div>
+            <div class="stat-sub">ago · scheduled 18h</div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Protocol APR Comparison</div>
+              <div class="apy-badge">Auto-routing active</div>
+            </div>
+            <div class="card-body">
+              <table class="data-table" id="protocolTable"></table>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div class="card">
+              <div class="card-header"><div class="card-title">Rebalancer Settings</div></div>
+              <div class="card-body">
+                <div style="display:flex;flex-direction:column;gap:14px">
+                  <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div>
+                      <div style="font-size:13px;color:var(--text)">Auto-rebalance</div>
+                      <div style="font-size:11px;color:var(--text3)">Every 24h via scheduler</div>
+                    </div>
+                    <label class="switch"><input type="checkbox" checked><div class="switch-track"></div><div class="switch-thumb"></div></label>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div>
+                      <div style="font-size:13px;color:var(--text)">Auto-compound</div>
+                      <div style="font-size:11px;color:var(--text3)">Reinvest yield automatically</div>
+                    </div>
+                    <label class="switch"><input type="checkbox" checked><div class="switch-track"></div><div class="switch-thumb"></div></label>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div>
+                      <div style="font-size:13px;color:var(--text)">Min. APR delta to rebalance</div>
+                      <div style="font-size:11px;color:var(--text3)">Skip if improvement &lt; threshold</div>
+                    </div>
+                    <span style="font-family:var(--font-mono);font-size:13px;color:var(--text)">0.5%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><div class="card-title">Yield History</div></div>
+              <div class="card-body compact">
+                <div style="display:flex;flex-direction:column;gap:8px" id="yieldHistory"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ DCA + SAVINGS VIEW ═══ -->
+      <div class="view" id="view-dca">
+        <div class="view-header">
+          <h1>DCA + Savings</h1>
+          <p>Dollar-cost averaging, scheduled savings, round-up automation, and borrow loops</p>
+        </div>
+
+        <div class="three-col">
+          <div class="card">
+            <div class="card-header"><div class="card-title">DCA Orders</div></div>
+            <div class="card-body compact">
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div class="rule-item">
+                  <div class="rule-dot" style="background:var(--blue)"></div>
+                  <div class="rule-content">
+                    <div class="rule-text">$50 FLOW every Friday</div>
+                    <div class="rule-meta">Next: Friday 00:00 UTC · 12 executions</div>
+                    <div class="progress-bar" style="margin-top:6px"><div class="progress-fill pf-blue" style="width:60%"></div></div>
+                    <div class="rule-meta">Avg. price: $1.84 · Total: $600</div>
+                  </div>
+                  <div class="rule-badge rb-blue">DCA</div>
+                </div>
+                <div class="rule-item">
+                  <div class="rule-dot" style="background:var(--purple)"></div>
+                  <div class="rule-content">
+                    <div class="rule-text">$100 USDC into savings monthly</div>
+                    <div class="rule-meta">Next: Apr 1 · 3 executions</div>
+                  </div>
+                  <div class="rule-badge rb-purple">Savings</div>
+                </div>
+              </div>
+              <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:12px;font-size:12px" onclick="showAddRuleModal()">+ Add DCA Order</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><div class="card-title">Savings Vaults</div></div>
+            <div class="card-body compact">
+              <div style="display:flex;flex-direction:column;gap:10px" id="savingsVaultsList"></div>
+              <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:12px;font-size:12px" onclick="showToast('New savings vault modal', 'info')">+ New Vault</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><div class="card-title">Round-Up Jar</div></div>
+            <div class="card-body">
+              <div style="text-align:center;margin-bottom:16px">
+                <div style="font-size:11px;color:var(--text3);font-family:var(--font-mono);margin-bottom:6px">COLLECTED THIS MONTH</div>
+                <div style="font-family:var(--font-mono);font-size:32px;font-weight:700;color:var(--green)">$34.60</div>
+                <div style="font-size:12px;color:var(--text3);margin-top:4px">from 23 round-ups</div>
+              </div>
+              <hr class="sep">
+              <div style="font-size:12px;color:var(--text2);margin-bottom:8px">Round-up to nearest:</div>
+              <div class="tab-row">
+                <button class="tab-btn active">$1</button>
+                <button class="tab-btn" onclick="this.closest('.tab-row').querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active')">$5</button>
+                <button class="tab-btn" onclick="this.closest('.tab-row').querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active')">$10</button>
+                <button class="tab-btn" onclick="this.closest('.tab-row').querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active')">$50</button>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+                <span style="font-size:13px;color:var(--text)">Auto-invest round-ups</span>
+                <label class="switch"><input type="checkbox" checked><div class="switch-track"></div><div class="switch-thumb"></div></label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DCA Borrow Loop -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">DCA Borrow Loop</div>
+            <span class="rule-status rs-pending"><div class="rs-dot"></div>Configured</span>
+          </div>
+          <div class="card-body">
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+              <div style="background:var(--bg3);border-radius:8px;padding:12px;text-align:center">
+                <div style="font-size:10px;color:var(--text3);font-family:var(--font-mono);margin-bottom:6px">STEP 1</div>
+                <div style="font-size:12px;color:var(--text);font-weight:500">Deposit collateral</div>
+                <div style="font-size:11px;color:var(--blue);margin-top:4px">$1,000 USDC</div>
+              </div>
+              <div style="background:var(--bg3);border-radius:8px;padding:12px;text-align:center">
+                <div style="font-size:10px;color:var(--text3);font-family:var(--font-mono);margin-bottom:6px">STEP 2</div>
+                <div style="font-size:12px;color:var(--text);font-weight:500">Auto-borrow at 50%</div>
+                <div style="font-size:11px;color:var(--amber);margin-top:4px">$500 borrowed</div>
+              </div>
+              <div style="background:var(--bg3);border-radius:8px;padding:12px;text-align:center">
+                <div style="font-size:10px;color:var(--text3);font-family:var(--font-mono);margin-bottom:6px">STEP 3</div>
+                <div style="font-size:12px;color:var(--text);font-weight:500">DCA into FLOW</div>
+                <div style="font-size:11px;color:var(--green);margin-top:4px">$500 weekly</div>
+              </div>
+              <div style="background:var(--bg3);border-radius:8px;padding:12px;text-align:center">
+                <div style="font-size:10px;color:var(--text3);font-family:var(--font-mono);margin-bottom:6px">STEP 4</div>
+                <div style="font-size:12px;color:var(--text);font-weight:500">Auto-repay from yield</div>
+                <div style="font-size:11px;color:var(--purple);margin-top:4px">Monthly schedule</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ AI PORTFOLIO VIEW ═══ -->
+      <div class="view" id="view-portfolio">
+        <div class="view-header">
+          <h1>AI Portfolio Manager</h1>
+          <p>Autonomous rebalancing powered by on-chain AI signals via Flow EVM oracle</p>
+        </div>
+
+        <div class="two-col">
+          <div style="display:flex;flex-direction:column;gap:16px">
+
+            <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:0">
+              <div class="stat-card green">
+                <div class="stat-label">Portfolio Value</div>
+                <div class="stat-value green">$6,814</div>
+                <div class="stat-sub up">+2.1% this week</div>
+              </div>
+              <div class="stat-card amber">
+                <div class="stat-label">Risk Profile</div>
+                <div class="stat-value amber" style="font-size:18px">Moderate</div>
+                <div class="stat-sub">1% drift threshold</div>
+              </div>
+              <div class="stat-card blue">
+                <div class="stat-label">Last Rebalance</div>
+                <div class="stat-value blue">2d</div>
+                <div class="stat-sub">ago · auto-scheduled</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><div class="card-title">Target Allocation</div></div>
+              <div class="card-body">
+                <div class="allocation-list" id="allocationList"></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><div class="card-title">Recent Rebalances</div></div>
+              <div class="card-body compact">
+                <table class="data-table">
+                  <thead><tr><th>Date</th><th>Action</th><th>Amount</th><th>Result</th></tr></thead>
+                  <tbody>
+                    <tr><td class="mono">Mar 29</td><td>Sold BTC → USDC</td><td class="mono green">$240</td><td class="mono green">+0.4%</td></tr>
+                    <tr><td class="mono">Mar 22</td><td>Bought FLOW</td><td class="mono green">$180</td><td class="mono green">+1.2%</td></tr>
+                    <tr><td class="mono">Mar 15</td><td>Rebalanced USDC</td><td class="mono amber">$320</td><td class="mono">neutral</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div class="card">
+              <div class="card-header"><div class="card-title">AI Oracle Signal</div></div>
+              <div class="card-body">
+                <div style="background:var(--bg3);border-radius:8px;padding:14px;font-family:var(--font-mono);font-size:11px;margin-bottom:12px">
+                  <div style="color:var(--text3);margin-bottom:8px">// Latest AI portfolio signal</div>
+                  <div>portfolioId: <span style="color:var(--blue)">0xab12...</span></div>
+                  <div>action: <span style="color:var(--green)">"rebalance"</span></div>
+                  <div>sell: <span style="color:var(--coral)">"BTC 5%"</span></div>
+                  <div>buy: <span style="color:var(--green)">"FLOW 3%, USDC 2%"</span></div>
+                  <div>confidence: <span style="color:var(--amber)">0.87</span></div>
+                  <div>nextCheck: <span style="color:var(--text2)">86400s</span></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="font-size:13px;color:var(--text)">Auto-execute signals</span>
+                  <label class="switch"><input type="checkbox" checked><div class="switch-track"></div><div class="switch-thumb"></div></label>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><div class="card-title">Risk Profile</div></div>
+              <div class="card-body">
+                <div class="tab-row">
+                  <button class="tab-btn" onclick="setRisk(this,'conservative')">Conservative</button>
+                  <button class="tab-btn active" onclick="setRisk(this,'moderate')">Moderate</button>
+                  <button class="tab-btn" onclick="setRisk(this,'aggressive')">Aggressive</button>
+                </div>
+                <div style="font-size:12px;color:var(--text2);margin-top:8px" id="riskDesc">Rebalances when allocation drifts &gt;1%. Daily AI signal check. Balanced between growth and stability.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ SUBSCRIPTIONS VIEW ═══ -->
+      <div class="view" id="view-subscriptions">
+        <div class="view-header">
+          <h1>Subscriptions</h1>
+          <p>Recurring on-chain payments — rent, SaaS, DAOs. Money leaves automatically.</p>
+        </div>
+
+        <div class="two-col">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Active Subscriptions</div>
+              <button class="btn btn-primary" style="font-size:12px;padding:6px 12px" onclick="showAddSubModal()">+ New</button>
+            </div>
+            <div class="card-body compact">
+              <div style="display:flex;flex-direction:column;gap:8px" id="subsList"></div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div class="card">
+              <div class="card-header"><div class="card-title">Monthly Summary</div></div>
+              <div class="card-body">
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Total outgoing/month</span><span style="font-family:var(--font-mono);color:var(--coral);font-weight:700">-$1,127</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Next payment</span><span style="font-size:13px;color:var(--amber)">Apr 1 · $800</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Payments completed</span><span style="font-family:var(--font-mono);color:var(--text)">34</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Failed payments</span><span style="font-family:var(--font-mono);color:var(--green)">0</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header"><div class="card-title">Subscription Reserves</div></div>
+              <div class="card-body">
+                <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Idle subscription reserves earn yield while waiting for payment dates.</div>
+                <div style="text-align:center">
+                  <div style="font-family:var(--font-mono);font-size:24px;font-weight:700;color:var(--amber);margin-bottom:4px">$2,254</div>
+                  <div style="font-size:12px;color:var(--text3)">earning 7.9% APY in lottery pool</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ LOTTERY VIEW ═══ -->
+      <div class="view" id="view-lottery">
+        <div class="view-header">
+          <h1>Lossless Lottery Pool</h1>
+          <p>Your principal is always safe. Only yield is used as prizes — verified by Flow VRF.</p>
+        </div>
+
+        <div class="two-col">
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div class="lottery-card" style="text-align:left">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+                <div>
+                  <div class="stat-label" style="color:var(--text3)">Today's Prize Pool</div>
+                  <div class="lottery-jackpot" style="font-size:48px" id="lotteryJackpot">$47.33</div>
+                  <div class="lottery-apy">Funded entirely by yield · Principal always returned</div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-size:11px;color:var(--text3);font-family:var(--font-mono);margin-bottom:4px">NEXT DRAW</div>
+                  <div class="lottery-countdown" style="justify-content:flex-end">
+                    <div class="cd-block"><div class="cd-num" id="cdHours2">06</div><div class="cd-unit">hrs</div></div>
+                    <div class="cd-block"><div class="cd-num" id="cdMins2">14</div><div class="cd-unit">min</div></div>
+                    <div class="cd-block"><div class="cd-num" id="cdSecs2">33</div><div class="cd-unit">sec</div></div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+                <div style="background:rgba(0,0,0,0.3);border-radius:8px;padding:10px;text-align:center">
+                  <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Your deposit</div>
+                  <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--text)">$500</div>
+                </div>
+                <div style="background:rgba(0,0,0,0.3);border-radius:8px;padding:10px;text-align:center">
+                  <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Your tickets</div>
+                  <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--amber)">12.4%</div>
+                </div>
+                <div style="background:rgba(0,0,0,0.3);border-radius:8px;padding:10px;text-align:center">
+                  <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Pool APY</div>
+                  <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--green)">8.4%</div>
+                </div>
+              </div>
+
+              <div style="display:flex;gap:10px">
+                <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="showToast('Depositing $100 into lottery pool...', 'info')">Deposit More</button>
+                <button class="btn btn-ghost" style="flex:1;justify-content:center" onclick="showToast('Withdrawal queued for next draw', 'info')">Withdraw</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><div class="card-title">VRF Verification</div></div>
+              <div class="card-body">
+                <div style="background:var(--bg3);border-radius:8px;padding:12px;font-family:var(--font-mono);font-size:11px;color:var(--text2)">
+                  <div style="color:var(--text3);margin-bottom:6px">// Last draw · Mar 30, 2026</div>
+                  <div>vrfOutput: <span style="color:var(--green)">0x8f3d2e...</span></div>
+                  <div>winner: <span style="color:var(--amber)">0x7a2c...</span></div>
+                  <div>prize: <span style="color:var(--green)">$44.18 USDC</span></div>
+                  <div>principalIntact: <span style="color:var(--green)">true</span></div>
+                  <div>txHash: <span style="color:var(--blue)">0x1f4a...</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><div class="card-title">Recent Winners</div></div>
+            <div class="card-body compact">
+              <div class="lottery-winners" id="lotteryWinners"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ GIFT CARDS VIEW ═══ -->
+      <div class="view" id="view-giftcards">
+        <div class="view-header">
+          <h1>Yield-Backed Gift Cards</h1>
+          <p>Gift cards that earn yield before they're opened. Principal + accumulated interest goes to the recipient.</p>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div class="tab-row" style="margin-bottom:0">
+            <button class="tab-btn active">Sent</button>
+            <button class="tab-btn" onclick="this.closest('.tab-row').querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active')">Received</button>
+          </div>
+          <button class="btn btn-primary" onclick="showMintGiftModal()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 5v14M5 12h14"/></svg>
+            Mint Gift Card
+          </button>
+        </div>
+
+        <div class="gift-grid" id="giftGrid"></div>
+      </div>
+
+      <!-- ═══ WORK CREDENTIAL VIEW ═══ -->
+      <div class="view" id="view-credential">
+        <div class="view-header">
+          <h1>WorkCredential</h1>
+          <p>Your soul-bound on-chain financial identity. Non-transferable, entitlement-gated, DeFi-readable.</p>
+        </div>
+
+        <div class="two-col">
+          <div style="display:flex;flex-direction:column;gap:16px">
+
+            <div class="credential">
+              <div class="cred-header">
+                <div class="cred-avatar">AO</div>
+                <div>
+                  <div class="cred-name">Amaka Obi</div>
+                  <div class="cred-role">Senior Developer · techcorp.flow</div>
+                </div>
+              </div>
+
+              <div class="cred-stats">
+                <div class="cred-stat">
+                  <div class="cred-stat-val">14</div>
+                  <div class="cred-stat-label">Months Active</div>
+                </div>
+                <div class="cred-stat">
+                  <div class="cred-stat-val">7</div>
+                  <div class="cred-stat-label">Milestones</div>
+                </div>
+                <div class="cred-stat">
+                  <div class="cred-stat-val">0</div>
+                  <div class="cred-stat-label">Disputes</div>
+                </div>
+              </div>
+
+              <div class="credit-score-bar">
+                <div class="cs-header">
+                  <span class="cs-label">Credit Score</span>
+                  <span class="cs-value">847</span>
+                </div>
+                <div class="progress-bar" style="height:8px"><div class="progress-fill pf-green" style="width:84.7%"></div></div>
+                <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:var(--text3)"><span>0</span><span>1000</span></div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+                <div style="background:var(--bg4);border-radius:8px;padding:12px">
+                  <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Total Earned</div>
+                  <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--green)">$48,240</div>
+                </div>
+                <div style="background:var(--bg4);border-radius:8px;padding:12px">
+                  <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Total Yield</div>
+                  <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--amber)">$2,847</div>
+                </div>
+                <div style="background:var(--bg4);border-radius:8px;padding:12px">
+                  <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Avg. APY</div>
+                  <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--blue)">8.2%</div>
+                </div>
+                <div style="background:var(--bg4);border-radius:8px;padding:12px">
+                  <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Yield Streaks</div>
+                  <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--purple)">14</div>
+                </div>
+              </div>
+
+              <div style="display:flex;gap:10px">
+                <button class="btn btn-ghost" style="flex:1;justify-content:center;font-size:12px" onclick="showToast('Credential attestation URL copied', 'success')">Share Credential</button>
+                <button class="btn btn-ghost" style="flex:1;justify-content:center;font-size:12px" onclick="showToast('Opening on Flowscan...', 'info')">View On-Chain</button>
+              </div>
+            </div>
+
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div class="card">
+              <div class="card-header"><div class="card-title">Employment History</div></div>
+              <div class="card-body compact">
+                <div style="display:flex;flex-direction:column;gap:8px" id="employmentHistory"></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><div class="card-title">DeFi Integrations</div></div>
+              <div class="card-body">
+                <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Protocols that read your WorkCredential for undercollateralized lending:</div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg3);padding:10px 12px;border-radius:8px">
+                    <span style="font-size:13px;color:var(--text)">IncrementFi Lending</span>
+                    <span style="font-size:12px;color:var(--green)">120% LTV eligible</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg3);padding:10px 12px;border-radius:8px">
+                    <span style="font-size:13px;color:var(--text)">FlowDAO Grants</span>
+                    <span style="font-size:12px;color:var(--blue)">Verified contributor</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg3);padding:10px 12px;border-radius:8px">
+                    <span style="font-size:13px;color:var(--text)">Blocto Insurance</span>
+                    <span style="font-size:12px;color:var(--purple)">Income verification</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end content -->
+  </main>
+</div><!-- end app -->
+
+<!-- ═══ MODALS ═══ -->
+
+<!-- Add Rule Modal -->
+<div class="modal-overlay" id="addRuleModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add Autopilot Rule</div>
+      <div class="modal-close" onclick="closeModal('addRuleModal')">✕</div>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Describe your rule in plain English</label>
+        <textarea class="form-textarea" id="modalNlInput" placeholder="e.g. save 20% of every paycheck into my vault" oninput="parseModalNL(this.value)"></textarea>
+      </div>
+      <div class="nl-preview" id="modalNlPreview"></div>
+      <div style="margin-top:16px">
+        <div style="font-size:11px;color:var(--text3);font-family:var(--font-mono);margin-bottom:8px">QUICK ADD</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px" id="quickRulePills"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('addRuleModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addRule()">Deploy Rule →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Withdraw Modal -->
+<div class="modal-overlay" id="withdrawModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Withdraw Earnings</div>
+      <div class="modal-close" onclick="closeModal('withdrawModal')">✕</div>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--bg3);border-radius:var(--r);padding:16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+        <span style="color:var(--text2);font-size:13px">Claimable now</span>
+        <span style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--green)">$2,226.67</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Amount (USDC)</label>
+        <input class="form-input" type="number" placeholder="0.00" id="withdrawAmount">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Destination</label>
+        <input class="form-input" value="amaka.flow (self)" readonly>
+      </div>
+      <div style="background:var(--green-dim2);border:1px solid rgba(0,229,160,0.15);border-radius:var(--r);padding:10px 12px;font-size:12px;color:var(--text2)">
+        This transaction is gasless — sponsored by FlowPilot protocol
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('withdrawModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="doWithdraw()">Withdraw →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Mint Gift Card Modal -->
+<div class="modal-overlay" id="mintGiftModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Mint Yield-Backed Gift Card</div>
+      <div class="modal-close" onclick="closeModal('mintGiftModal')">✕</div>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Amount (USDC)</label>
+        <input class="form-input" type="number" placeholder="100.00" id="giftAmount">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Recipient (.flow address)</label>
+        <input class="form-input" type="text" placeholder="friend.flow">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Message</label>
+        <input class="form-input" type="text" placeholder="Happy birthday! 🎂">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Unlock date (optional)</label>
+        <input class="form-input" type="date">
+      </div>
+      <div style="background:var(--amber-dim);border:1px solid rgba(245,166,35,0.2);border-radius:var(--r);padding:10px 12px;font-size:12px;color:var(--text2)">
+        The card earns <strong style="color:var(--amber)">~8.4% APY</strong> until redeemed. Recipient gets principal + all accumulated yield.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('mintGiftModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="mintGiftCard()">Mint Card →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Subscription Modal -->
+<div class="modal-overlay" id="addSubModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">New Subscription</div>
+      <div class="modal-close" onclick="closeModal('addSubModal')">✕</div>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Name</label>
+        <input class="form-input" placeholder="e.g. Rent, Netflix, DAO dues">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Recipient (.flow address)</label>
+        <input class="form-input" placeholder="landlord.flow">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Amount (USDC)</label>
+        <input class="form-input" type="number" placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Frequency</label>
+        <select class="form-select">
+          <option>Monthly</option>
+          <option>Weekly</option>
+          <option>Quarterly</option>
+          <option>Annual</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('addSubModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addSubscription()">Create Stream →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ═══════════════════════════════════════════
+// STATE & DATA
+// ═══════════════════════════════════════════
+
+const RULES = [
+  { id: 1, text: "Save 20% of every paycheck into my 6-month vault", meta: "Runs on each salary milestone · next in 12d", badge: "Savings", badgeClass: "rb-green", dot: "var(--green)", status: "active" },
+  { id: 2, text: "Buy $50 of FLOW every Friday at market price", meta: "DCA scheduler · next in 3d 4h", badge: "DCA", badgeClass: "rb-blue", dot: "var(--blue)", status: "active" },
+  { id: 3, text: "Pay $800 to landlord.flow on the 1st of each month", meta: "Subscription stream · next in 18d", badge: "Subscription", badgeClass: "rb-amber", dot: "var(--amber)", status: "active" },
+  { id: 4, text: "Round up every withdrawal to the nearest $10, save the change", meta: "Save-the-change hook · active on all outflows", badge: "Round-up", badgeClass: "rb-purple", dot: "var(--purple)", status: "active" },
+  { id: 5, text: "Keep portfolio: 60% stablecoins, 30% FLOW, 10% BTC — rebalance weekly", meta: "AI portfolio · rebalanced 2d ago · +2.1% this week", badge: "AI Portfolio", badgeClass: "rb-coral", dot: "var(--coral)", status: "active" },
+  { id: 6, text: "Send a $100 yield-backed gift card to sister on her birthday (Oct 12)", meta: "Gift vault · mints NFT on Oct 12 · earning 7.8% APY", badge: "Gift Card", badgeClass: "rb-pink", dot: "var(--pink)", status: "pending" }
+];
+
+const GIFT_CARDS = [
+  { theme: "gc-purple", amount: "$100", yield: "+$3.24 yield", yieldColor: "var(--purple)", to: "sister.flow", message: "Happy Birthday! 🎂", date: "Unlocks Oct 12, 2026" },
+  { theme: "gc-green", amount: "$250", yield: "+$8.91 yield", yieldColor: "var(--green)", to: "dad.flow", message: "Father's Day 🎁", date: "Redeemable anytime" },
+  { theme: "gc-pink", amount: "$50", yield: "+$1.44 yield", yieldColor: "var(--pink)", to: "friend.flow", message: "Good luck with the new job!", date: "Unlocks Apr 15, 2026" },
+  { theme: "gc-blue", amount: "$500", yield: "+$24.18 yield", yieldColor: "var(--blue)", to: "charity.flow", message: "Donation — keep the yield", date: "Redeemable anytime" }
+];
+
+const SUBS = [
+  { icon: "🏠", name: "Rent", payee: "landlord.flow", amount: "$800", interval: "Monthly", next: "Apr 1" },
+  { icon: "🎬", name: "Netflix DAO", payee: "netflixdao.flow", amount: "$15", interval: "Monthly", next: "Apr 3" },
+  { icon: "🌐", name: "DAO Dues", payee: "flowdao.flow", amount: "$200", interval: "Monthly", next: "Apr 1" },
+  { icon: "🛡️", name: "DeFi Insurance", payee: "bloctoinsure.flow", amount: "$112", interval: "Monthly", next: "Apr 5" }
+];
+
+const ACTIVITY = [
+  { icon: "⚡", iconBg: "var(--green-dim)", title: "YieldRebalanceHandler executed", hash: "0x7f3a2e...", amount: "+$4.22", amountColor: "var(--green)", time: "2h ago" },
+  { icon: "📈", iconBg: "var(--blue-dim)", title: "DCA: Bought 26.8 FLOW @ $1.87", hash: "0x1b4c9d...", amount: "-$50.00", amountColor: "var(--text2)", time: "3d ago" },
+  { icon: "🎟️", iconBg: "var(--amber-dim)", title: "LotteryDrawHandler: Draw completed", hash: "0x8f3d2e...", amount: "+$0", amountColor: "var(--text3)", time: "6h ago" },
+  { icon: "💳", iconBg: "var(--coral-dim)", title: "Subscription: Rent payment executed", hash: "0x4a7b1c...", amount: "-$800", amountColor: "var(--coral)", time: "1d ago" },
+  { icon: "🎁", iconBg: "var(--purple-dim)", title: "GiftCard minted for sister.flow", hash: "0x2c8e4f...", amount: "-$100", amountColor: "var(--text2)", time: "5d ago" }
+];
+
+const MILESTONES = [
+  { label: "Milestone 7", date: "Mar 1", status: "done", desc: "Work proof verified · Stream resumed" },
+  { label: "Milestone 6", date: "Feb 1", status: "done", desc: "Work proof verified · Stream resumed" },
+  { label: "Milestone 8 (next)", date: "Apr 14", status: "upcoming", desc: "Scheduled · YieldRebalanceHandler on standby" }
+];
+
+const EMPLOYMENT = [
+  { employer: "techcorp.flow", role: "Senior Developer", start: "Jan 2025", end: "Present", earned: "$48,240", color: "var(--green)" },
+  { employer: "startupxyz.flow", role: "Developer", start: "Mar 2024", end: "Dec 2024", earned: "$22,000", color: "var(--blue)" }
+];
+
+const PROTOCOLS = [
+  { name: "Increment Finance", apy: "8.4%", tvl: "$14.2M", current: true },
+  { name: "Metaflow Vaults", apy: "7.9%", tvl: "$8.7M", current: false },
+  { name: "FlowDEX LP", apy: "11.2%", tvl: "$2.1M", current: false },
+  { name: "BloctoPay Earn", apy: "6.8%", tvl: "$20.4M", current: false }
+];
+
+const LOTTERY_WINNERS = [
+  { addr: "0x7a2c...4f81", amount: "$44.18", date: "Mar 30" },
+  { addr: "0x3e8b...9c12", amount: "$38.72", date: "Mar 29" },
+  { addr: "0x1d5a...7e34", amount: "$51.04", date: "Mar 28" },
+  { addr: "0x9f2c...2a67", amount: "$29.91", date: "Mar 27" },
+  { addr: "0x6b4e...5d09", amount: "$42.37", date: "Mar 26" }
+];
+
+const SAVINGS_VAULTS = [
+  { name: "6-Month Goal", target: "$6,000", current: "$1,840", pct: 30.7, color: "pf-blue" },
+  { name: "Emergency Fund", target: "$3,000", current: "$2,100", pct: 70, color: "pf-green" },
+  { name: "Holiday Trip", target: "$2,000", current: "$440", pct: 22, color: "pf-purple" }
+];
+
+const ALLOCATIONS = [
+  { asset: "USDC / Stablecoins", target: 60, current: 58.4, color: "pf-green", colorHex: "var(--green)" },
+  { asset: "FLOW", target: 30, current: 31.2, color: "pf-blue", colorHex: "var(--blue)" },
+  { asset: "BTC (wrapped)", target: 10, current: 10.4, color: "pf-amber", colorHex: "var(--amber)" }
+];
+
+const QUICK_RULES = [
+  "save 10% of each paycheck",
+  "buy $25 FLOW weekly",
+  "enter $50 in lottery",
+  "pay 200 to friend.flow monthly",
+  "rebalance portfolio weekly"
+];
+
+// ═══════════════════════════════════════════
+// LIVE TICKER
+// ═══════════════════════════════════════════
+
+let baseBalance = 2226.67;
+let baseYield = 189.44;
+let baseSavings = 1840.22;
+const RATE_PER_SEC = 0.00891;
+const YIELD_PER_SEC = 0.00119;
+
+function pad(n) { return String(n).padStart(2,'0'); }
+
+function updateTickers() {
+  baseBalance += RATE_PER_SEC / 2;
+  baseYield += YIELD_PER_SEC / 2;
+  const totalBalance = baseBalance + baseYield + baseSavings;
+
+  const fmtMono = (n) => '$' + n.toFixed(4);
+  const fmt2 = (n) => '$' + n.toFixed(2);
+
+  const mainTicker = document.getElementById('mainTicker');
+  if (mainTicker) mainTicker.textContent = fmtMono(baseBalance);
+  const yp = document.getElementById('yieldPill');
+  if (yp) yp.textContent = fmt2(baseYield);
+  const tb = document.getElementById('totalBalance');
+  if (tb) tb.textContent = fmt2(totalBalance);
+  const ye = document.getElementById('yieldEarned');
+  if (ye) ye.textContent = fmt2(baseYield);
+}
+
+setInterval(updateTickers, 500);
+
+// ═══════════════════════════════════════════
+// COUNTDOWN TIMER
+// ═══════════════════════════════════════════
+
+let countdown = 6 * 3600 + 14 * 60 + 33;
+function updateCountdown() {
+  if (countdown <= 0) { countdown = 86400; return; }
+  countdown--;
+  const h = Math.floor(countdown / 3600);
+  const m = Math.floor((countdown % 3600) / 60);
+  const s = countdown % 60;
+  ['cdHours','cdHours2'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = pad(h); });
+  ['cdMins','cdMins2'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = pad(m); });
+  ['cdSecs','cdSecs2'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = pad(s); });
+}
+setInterval(updateCountdown, 1000);
+
+// ═══════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════
+
+const PAGE_META = {
+  dashboard: { title: 'Dashboard', sub: 'Your autonomous finance overview' },
+  stream: { title: 'Payroll Stream', sub: 'Per-second salary disbursement with milestone gating' },
+  rules: { title: 'Rules Engine', sub: 'Compose financial automation in plain English' },
+  yield: { title: 'Yield Autopilot', sub: 'Autonomous yield routing and auto-restaking' },
+  dca: { title: 'DCA + Savings', sub: 'Scheduled investing and savings automation' },
+  portfolio: { title: 'AI Portfolio Manager', sub: 'On-chain AI-driven rebalancing' },
+  subscriptions: { title: 'Subscriptions', sub: 'Recurring on-chain payment streams' },
+  lottery: { title: 'Lossless Lottery', sub: 'Yield-funded daily prize pool via Flow VRF' },
+  giftcards: { title: 'Gift Cards', sub: 'Yield-bearing transferable gift cards' },
+  credential: { title: 'WorkCredential', sub: 'Soul-bound on-chain financial identity' }
+};
+
+function navigate(page) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const view = document.getElementById('view-' + page);
+  if (view) view.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + page + "'")) n.classList.add('active');
+  });
+  const meta = PAGE_META[page] || {};
+  const pt = document.getElementById('pageTitle');
+  const ps = document.getElementById('pageSubtitle');
+  if (pt) pt.textContent = meta.title || page;
+  if (ps) ps.textContent = meta.sub || '';
+}
+
+// ═══════════════════════════════════════════
+// RENDER FUNCTIONS
+// ═══════════════════════════════════════════
+
+function renderRuleItem(rule) {
+  const statusClass = rule.status === 'active' ? 'rs-active' : rule.status === 'pending' ? 'rs-pending' : 'rs-paused';
+  const statusLabel = rule.status === 'active' ? 'Active' : rule.status === 'pending' ? 'Pending' : 'Paused';
+  return `
+    <div class="rule-item">
+      <div class="rule-dot" style="background:${rule.dot}"></div>
+      <div class="rule-content">
+        <div class="rule-text">${rule.text}</div>
+        <div class="rule-meta">${rule.meta}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
+        <span class="rule-badge ${rule.badgeClass}">${rule.badge}</span>
+        <div class="rule-status ${statusClass}"><div class="rs-dot"></div><span>${statusLabel}</span></div>
+      </div>
+    </div>`;
+}
+
+function renderActivityItem(item) {
+  return `
+    <div class="activity-item">
+      <div class="activity-icon" style="background:${item.iconBg}">${item.icon}</div>
+      <div class="activity-content">
+        <div class="activity-title">${item.title}</div>
+        <div class="activity-hash">${item.hash}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="activity-amount" style="color:${item.amountColor}">${item.amount}</div>
+        <div class="activity-time">${item.time}</div>
+      </div>
+    </div>`;
+}
+
+function renderMilestone(m) {
+  const isUpcoming = m.status === 'upcoming';
+  return `
+    <div style="display:flex;align-items:flex-start;gap:12px">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:0">
+        <div style="width:10px;height:10px;border-radius:50%;background:${isUpcoming ? 'var(--text3)' : 'var(--green)'};box-shadow:${isUpcoming ? 'none' : '0 0 8px var(--green)'};flex-shrink:0;margin-top:3px"></div>
+        <div style="width:1px;height:30px;background:var(--border);margin-top:4px"></div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:500;color:${isUpcoming ? 'var(--text2)' : 'var(--text)'};">${m.label}</div>
+        <div style="font-size:11px;color:${isUpcoming ? 'var(--amber)' : 'var(--green)'};font-family:var(--font-mono)">${m.date}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px">${m.desc}</div>
+      </div>
+    </div>`;
+}
+
+function renderProtocolTable() {
+  const rows = PROTOCOLS.map(p => `
+    <tr>
+      <td>${p.current ? `<span style="color:var(--green);font-weight:500">${p.name}</span>` : p.name}</td>
+      <td class="mono ${p.current ? 'green' : ''}">${p.apy}</td>
+      <td class="mono" style="color:var(--text3)">${p.tvl}</td>
+      <td>${p.current ? `<span class="rule-badge rb-green">Deployed</span>` : `<span class="rule-badge" style="background:var(--bg3);color:var(--text3)">Available</span>`}</td>
+    </tr>`).join('');
+  const el = document.getElementById('protocolTable');
+  if (el) el.innerHTML = `<thead><tr><th>Protocol</th><th>APY</th><th>TVL</th><th>Status</th></tr></thead><tbody>${rows}</tbody>`;
+}
+
+function renderYieldHistory() {
+  const items = [
+    { date: 'Mar 31', amount: '+$4.22', protocol: 'Increment Finance', apy: '8.4%' },
+    { date: 'Mar 30', amount: '+$4.18', protocol: 'Increment Finance', apy: '8.4%' },
+    { date: 'Mar 29', amount: '+$3.96', protocol: 'Metaflow Vaults', apy: '7.9%' },
+    { date: 'Mar 28', amount: '+$4.31', protocol: 'Increment Finance', apy: '8.6%' }
+  ];
+  const el = document.getElementById('yieldHistory');
+  if (el) el.innerHTML = items.map(i => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-size:12px;color:var(--text)">${i.protocol}</div>
+        <div style="font-size:11px;color:var(--text3);font-family:var(--font-mono)">${i.date} · ${i.apy}</div>
+      </div>
+      <div style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--green)">${i.amount}</div>
+    </div>`).join('');
+}
+
+function renderGiftGrid() {
+  const el = document.getElementById('giftGrid');
+  if (!el) return;
+  el.innerHTML = GIFT_CARDS.map(gc => `
+    <div class="gift-card ${gc.theme}" onclick="showToast('Viewing gift card details', 'info')">
+      <div class="gift-tag">FlowPilot Gift Card · NFT</div>
+      <div class="gift-amount">${gc.amount}</div>
+      <div class="gift-yield" style="color:${gc.yieldColor}">${gc.yield} accrued</div>
+      <div class="gift-to">To: <strong>${gc.to}</strong></div>
+      <div class="gift-message">"${gc.message}"</div>
+      <div class="gift-date">${gc.date}</div>
+    </div>`).join('');
+}
+
+function renderSubsList() {
+  const el = document.getElementById('subsList');
+  if (!el) return;
+  el.innerHTML = SUBS.map(s => `
+    <div class="sub-item">
+      <div class="sub-icon" style="background:var(--bg4)">${s.icon}</div>
+      <div class="sub-content">
+        <div class="sub-name">${s.name}</div>
+        <div class="sub-payee">${s.payee}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="sub-amount">${s.amount}</div>
+        <div class="sub-next">${s.interval} · Next ${s.next}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderLotteryWinners() {
+  const el = document.getElementById('lotteryWinners');
+  if (!el) return;
+  el.innerHTML = LOTTERY_WINNERS.map(w => `
+    <div class="winner-row">
+      <div>
+        <div class="winner-addr">${w.addr}</div>
+        <div style="font-size:10px;color:var(--text3)">${w.date}</div>
+      </div>
+      <div class="winner-amount">${w.amount}</div>
+    </div>`).join('');
+}
+
+function renderSavingsVaults() {
+  const el = document.getElementById('savingsVaultsList');
+  if (!el) return;
+  el.innerHTML = SAVINGS_VAULTS.map(v => `
+    <div style="background:var(--bg4);border-radius:8px;padding:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="font-size:12px;font-weight:500;color:var(--text)">${v.name}</span>
+        <span style="font-family:var(--font-mono);font-size:12px;color:var(--text2)">${v.current} / ${v.target}</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill ${v.color}" style="width:${v.pct}%"></div></div>
+      <div style="font-size:10px;color:var(--text3);margin-top:3px">${v.pct.toFixed(1)}% of goal</div>
+    </div>`).join('');
+}
+
+function renderAllocationList() {
+  const el = document.getElementById('allocationList');
+  if (!el) return;
+  el.innerHTML = ALLOCATIONS.map(a => `
+    <div class="alloc-row">
+      <div class="alloc-header">
+        <span class="alloc-asset">${a.asset}</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:11px;color:var(--text3);font-family:var(--font-mono)">Current: ${a.current}%</span>
+          <span class="alloc-pct" style="color:${a.colorHex}">Target: ${a.target}%</span>
+        </div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill ${a.color}" style="width:${a.current}%"></div></div>
+    </div>`).join('');
+}
+
+function renderEmploymentHistory() {
+  const el = document.getElementById('employmentHistory');
+  if (!el) return;
+  el.innerHTML = EMPLOYMENT.map(e => `
+    <div style="background:var(--bg4);border-radius:8px;padding:12px;border-left:3px solid ${e.color}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-size:13px;font-weight:500;color:var(--text)">${e.role}</div>
+          <div style="font-size:12px;color:var(--text3);font-family:var(--font-mono)">${e.employer}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:var(--font-mono);font-size:13px;color:${e.color};font-weight:700">${e.earned}</div>
+          <div style="font-size:11px;color:var(--text3)">${e.start} – ${e.end}</div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function renderMilestoneTimeline() {
+  const el = document.getElementById('milestoneTimeline');
+  if (el) el.innerHTML = MILESTONES.map(renderMilestone).join('');
+}
+
+function renderQuickRulePills() {
+  const el = document.getElementById('quickRulePills');
+  if (!el) return;
+  el.innerHTML = QUICK_RULES.map(r => `
+    <span style="background:var(--bg3);border:1px solid var(--border);border-radius:99px;padding:4px 10px;font-size:11px;color:var(--text2);cursor:pointer;transition:all 0.15s"
+      onclick="document.getElementById('modalNlInput').value='${r}';parseModalNL('${r}')"
+      onmouseover="this.style.borderColor='var(--green)';this.style.color='var(--green)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">${r}</span>`).join('');
+}
+
+// ═══════════════════════════════════════════
+// NL COMPILER
+// ═══════════════════════════════════════════
+
+const NL_PATTERNS = [
+  { rx: /save\s+(\d+)%\s+of\s+(?:every\s+)?paycheck/i, type: 'savings_split', understood: (m) => `Savings rule: split ${m[1]}% of each paycheck → SplitAction(ratio=${(m[1]/100).toFixed(2)}) → DepositAction(vault=savings)`, actions: (m) => `// Flow Actions graph\nSplitAction { ratio: ${(m[1]/100).toFixed(2)} }\n  → DepositAction { target: "savings_vault" }\nTrigger: salary_milestone` },
+  { rx: /buy\s+\$?(\d+)\s+(?:of\s+)?(\w+)\s+every\s+(friday|monday|tuesday|wednesday|thursday|saturday|sunday|week|day|month)/i, type: 'dca', understood: (m) => `DCA order: buy $${m[1]} ${m[2].toUpperCase()} every ${m[3]} → SwapAction + ScheduledTrigger`, actions: (m) => `// Flow Actions graph\nSwapAction {\n  from: "USDC", to: "${m[2].toUpperCase()}",\n  amount: ${m[1]}\n}\nTrigger: scheduled(interval="${m[3]}")` },
+  { rx: /pay\s+\$?(\d+)\s+to\s+([\w.]+)\s+(?:on the|on)\s+(?:\d+(?:st|nd|rd|th)?\s+of\s+)?(?:each\s+)?month/i, type: 'subscription', understood: (m) => `Subscription: $${m[1]}/month to ${m[2]} → SubscriptionStream registered`, actions: (m) => `// Flow Actions graph\nSubscriptionStream {\n  payee: "${m[2]}",\n  amount: ${m[1]},\n  interval: 2592000\n}\nTrigger: scheduled(monthly)` },
+  { rx: /round\s+up\s+(?:every\s+)?withdrawal\s+to\s+(?:the\s+)?nearest\s+\$?(\d+)/i, type: 'roundup', understood: (m) => `Round-up hook: all outflows → nearest $${m[1]} → RoundUpAction(bucket=${m[1]}) → Jar`, actions: (m) => `// Flow Actions graph\nRoundUpAction {\n  bucket: ${m[1]},\n  outflow_hook: true\n}\n  → DepositAction { target: "roundup_jar" }` },
+  { rx: /keep\s+portfolio|rebalance\s+(?:my\s+)?portfolio/i, type: 'portfolio', understood: () => `Portfolio rule: configure allocations → AIRebalanceHandler registered`, actions: () => `// Flow Actions graph\nAIRebalanceHandler {\n  riskProfile: "moderate",\n  oracleAddress: "0x...",\n  interval: 86400\n}` },
+  { rx: /(?:send|gift)\s+\$?(\d+)\s+(?:gift\s+card|card)\s+to\s+([\w.]+)/i, type: 'giftcard', understood: (m) => `Gift card: mint $${m[1]} yield-backed NFT for ${m[2]}`, actions: (m) => `// Flow Actions graph\nGiftCardNFT.mint {\n  amount: ${m[1]},\n  recipient: "${m[2]}",\n  yieldEnabled: true\n}` },
+  { rx: /enter\s+\$?(\d+)\s+(?:into|in)\s+(?:the\s+)?lottery/i, type: 'lottery', understood: (m) => `Lottery entry: deposit $${m[1]} into lossless lottery pool`, actions: (m) => `// Flow Actions graph\nLotteryPool.deposit {\n  amount: ${m[1]},\n  depositor: "user"\n}` },
+];
+
+function parseNL(text) {
+  const preview = document.getElementById('nlPreview');
+  const output = document.getElementById('flowActionsOutput');
+  if (!text.trim()) {
+    if (preview) { preview.classList.remove('visible'); preview.innerHTML = ''; }
+    if (output) output.innerHTML = '<div style="color:var(--text3)">// Awaiting rule input...</div>';
+    return;
+  }
+  for (const p of NL_PATTERNS) {
+    const m = text.match(p.rx);
+    if (m) {
+      if (preview) { preview.classList.add('visible'); preview.innerHTML = `<span class="nl-understood">✓ Understood:</span> ${p.understood(m)}`; }
+      if (output) output.innerHTML = `<div style="color:var(--text3)">// Compiled Flow Actions</div><div style="margin-top:8px;color:var(--green)">${p.actions(m).replace(/\n/g,'<br>').replace(/ /g,'&nbsp;')}</div>`;
+      return;
+    }
+  }
+  if (preview) { preview.classList.add('visible'); preview.innerHTML = `<span style="color:var(--coral)">✗ Could not parse rule.</span> Try: "save 20% of paycheck", "buy $50 FLOW weekly", "pay $200 to friend.flow monthly"`; }
+}
+
+function parseModalNL(text) {
+  const preview = document.getElementById('modalNlPreview');
+  if (!preview) return;
+  if (!text.trim()) { preview.classList.remove('visible'); return; }
+  for (const p of NL_PATTERNS) {
+    const m = text.match(p.rx);
+    if (m) {
+      preview.classList.add('visible');
+      preview.innerHTML = `<span class="nl-understood">✓ I understood:</span> ${p.understood(m)}`;
+      return;
+    }
+  }
+  preview.classList.add('visible');
+  preview.innerHTML = `<span style="color:var(--coral)">✗ Could not parse.</span> Try an example from the quick-add pills below.`;
+}
+
+function setExample(text) {
+  const inp = document.getElementById('nlInput');
+  if (inp) { inp.value = text; parseNL(text); }
+}
+
+// ═══════════════════════════════════════════
+// MODALS
+// ═══════════════════════════════════════════
+
+function showAddRuleModal() { document.getElementById('addRuleModal').classList.add('open'); renderQuickRulePills(); }
+function showWithdrawModal() { document.getElementById('withdrawModal').classList.add('open'); }
+function showMintGiftModal() { document.getElementById('mintGiftModal').classList.add('open'); }
+function showAddSubModal() { document.getElementById('addSubModal').classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(mo => {
+  mo.addEventListener('click', e => { if (e.target === mo) mo.classList.remove('open'); });
+});
+
+function addRule() {
+  const input = document.getElementById('modalNlInput');
+  const text = input ? input.value.trim() : '';
+  if (!text) { showToast('Please enter a rule first', 'warning'); return; }
+  closeModal('addRuleModal');
+  showToast('Rule deployed on-chain', 'success', `"${text.slice(0,40)}${text.length > 40 ? '...' : ''}" — Flow Actions registered`);
+  if (input) input.value = '';
+  document.getElementById('modalNlPreview').classList.remove('visible');
+}
+
+function doWithdraw() {
+  const amount = document.getElementById('withdrawAmount').value;
+  closeModal('withdrawModal');
+  showToast('Withdrawal initiated', 'success', `$${amount || '2,226.67'} USDC · Gas sponsored · 0x${Math.random().toString(16).slice(2,10)}...`);
+}
+
+function mintGiftCard() {
+  const amount = document.getElementById('giftAmount').value;
+  closeModal('mintGiftModal');
+  showToast('Gift Card NFT minted', 'success', `$${amount || '100'} yield-backed gift card created`);
+  setTimeout(() => renderGiftGrid(), 500);
+}
+
+function addSubscription() {
+  closeModal('addSubModal');
+  showToast('Subscription stream created', 'success', 'SubscriptionHandler registered on-chain');
+}
+
+// ═══════════════════════════════════════════
+// TOASTS
+// ═══════════════════════════════════════════
+
+function showToast(title, type = 'success', subtitle = '') {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `
+    <div class="toast-icon"></div>
+    <div class="toast-text">
+      <strong>${title}</strong>
+      ${subtitle ? `<span>${subtitle}</span>` : ''}
+    </div>`;
+  container.appendChild(toast);
+  setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 200); }, 3500);
+}
+
+// ═══════════════════════════════════════════
+// MISC UI
+// ═══════════════════════════════════════════
+
+function setRisk(btn, profile) {
+  btn.closest('.tab-row').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const descs = {
+    conservative: 'Rebalances when allocation drifts >5%. Weekly AI signal check. Maximizes stability, minimizes trading.',
+    moderate: 'Rebalances when allocation drifts >1%. Daily AI signal check. Balanced between growth and stability.',
+    aggressive: 'Rebalances when allocation drifts >0.1%. 6-hourly AI signal check. Maximizes return, higher gas usage.'
+  };
+  const el = document.getElementById('riskDesc');
+  if (el) el.textContent = descs[profile] || '';
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+
+function init() {
+  // Render dashboard rule list (top 4)
+  const dashList = document.getElementById('dashRulesList');
+  if (dashList) dashList.innerHTML = RULES.slice(0, 4).map(renderRuleItem).join('');
+
+  // Render full rules list
+  const fullList = document.getElementById('fullRulesList');
+  if (fullList) fullList.innerHTML = RULES.map(renderRuleItem).join('');
+
+  // Render activity
+  const actList = document.getElementById('activityList');
+  if (actList) actList.innerHTML = ACTIVITY.map(renderActivityItem).join('');
+
+  // Render all other sections
+  renderProtocolTable();
+  renderYieldHistory();
+  renderGiftGrid();
+  renderSubsList();
+  renderLotteryWinners();
+  renderSavingsVaults();
+  renderAllocationList();
+  renderEmploymentHistory();
+  renderMilestoneTimeline();
+
+  // Initial ticker value
+  const mainTicker = document.getElementById('mainTicker');
+  if (mainTicker) mainTicker.textContent = '$' + baseBalance.toFixed(4);
+
+  // Welcome toast after 1s
+  setTimeout(() => showToast('FlowPilot connected', 'success', 'amaka.flow · All 6 rules active · No gas required'), 1000);
+  setTimeout(() => showToast('YieldRebalanceHandler executed', 'info', '+$4.22 harvested · Increment Finance 8.4% APY'), 3500);
+}
+
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

@@ -8,7 +8,7 @@ transaction(
     riskProfile: String,
     assetAllocations: {String: UFix64}
 ) {
-    prepare(user: auth(Storage) &Account) {
+    prepare(user: auth(Storage, Capabilities) &Account) {
         let storagePath = StoragePath(identifier: "Portfolio_".concat(portfolioId))!
 
         assert(
@@ -36,6 +36,11 @@ transaction(
         }
 
         user.storage.save(<- portfolio, to: storagePath)
+        let publicPath = PublicPath(identifier: "Portfolio_".concat(portfolioId))!
+        user.capabilities.publish(
+            user.capabilities.storage.issue<&PortfolioVault.Portfolio>(storagePath),
+            at: publicPath
+        )
 
         // Register AIRebalanceHandler with FlowTransactionScheduler
         // Interval depends on risk profile:

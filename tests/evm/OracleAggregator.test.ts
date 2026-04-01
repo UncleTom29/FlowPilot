@@ -19,7 +19,7 @@ describe('OracleAggregator', () => {
     aiOracle = signers[1];
 
     const OracleAggregatorFactory = await ethers.getContractFactory('OracleAggregator');
-    oracle = (await OracleAggregatorFactory.deploy()) as OracleAggregator;
+    oracle = (await OracleAggregatorFactory.deploy()) as unknown as OracleAggregator;
     await oracle.waitForDeployment();
   });
 
@@ -130,7 +130,7 @@ describe('WorkProofVerifier', () => {
     worker = signers[1];
 
     const WorkProofVerifierFactory = await ethers.getContractFactory('WorkProofVerifier');
-    verifier = (await WorkProofVerifierFactory.deploy()) as WorkProofVerifier;
+    verifier = (await WorkProofVerifierFactory.deploy()) as unknown as WorkProofVerifier;
     await verifier.waitForDeployment();
   });
 

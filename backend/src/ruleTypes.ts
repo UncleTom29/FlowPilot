@@ -1,3 +1,10 @@
+export type RuleParamValue =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: RuleParamValue };
+
 export type RuleType =
   | 'savings_split'
   | 'dca'
@@ -9,7 +16,7 @@ export type RuleType =
 
 export interface FlowActionNode {
   type: string;
-  params: Record<string, string | number | boolean>;
+  params: Record<string, RuleParamValue>;
   next?: FlowActionNode;
 }
 
@@ -23,7 +30,7 @@ export interface RuleDefinition {
   id: string;
   type: RuleType;
   rawText: string;
-  params: Record<string, string | number | boolean>;
+  params: Record<string, RuleParamValue>;
   flowActions: FlowActionNode[];
   schedulerConfig?: SchedulerConfig;
 }

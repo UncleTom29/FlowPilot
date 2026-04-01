@@ -46,13 +46,53 @@ async function main() {
     `\nBest APR: ${bestName} @ ${Number(bestAPR) / 100}% (index: ${bestIndex})`
   );
 
-  // Set AI oracle address if provided
-  const aiOracleAddress = process.env.AI_ORACLE_PUBLIC_KEY;
-  if (aiOracleAddress && ethers.isAddress(aiOracleAddress)) {
-    const setTx = await oracle.setAIOracleAddress(aiOracleAddress);
-    await setTx.wait();
-    console.log("AI oracle address set:", aiOracleAddress);
+  const aiOracleAddress =
+    process.env.AI_ORACLE_PUBLIC_KEY && ethers.isAddress(process.env.AI_ORACLE_PUBLIC_KEY)
+      ? process.env.AI_ORACLE_PUBLIC_KEY
+      : deployer.address;
+
+  const setTx = await oracle.setAIOracleAddress(aiOracleAddress);
+  await setTx.wait();
+  console.log("AI oracle address set:", aiOracleAddress);
+
+  const seededPortfolioId = ethers.id("flowpilot-demo-portfolio");
+  const seededSignal = ethers.toUtf8Bytes(
+    JSON.stringify({
+      risk: "moderate",
+      allocations: { FLOW: 60, USDC: 40 },
+      rebalanceAt: Math.floor(Date.now() / 1000),
+    })
+  );
+
+  if (aiOracleAddress.toLowerCase() === deployer.address.toLowerCase()) {
+    const signalTx = await oracle.submitPortfolioSignal(seededPortfolioId, seededSignal);
+    await signalTx.wait();
+    console.log("Seeded portfolio signal for flowpilot-demo-portfolio");
+  } else {
+    console.log("Skipped demo portfolio signal because AI_ORACLE_PUBLIC_KEY is not the deployer");
   }
+
+  const workerWallet = ethers.Wallet.createRandom();
+  const milestoneId = ethers.id("flowpilot-demo-milestone-001");
+  const workHash = ethers.id("flowpilot-demo-work-hash");
+
+  const submitProofTx = await verifier.submitProof(
+    milestoneId,
+    workHash,
+    workerWallet.address
+  );
+  await submitProofTx.wait();
+  console.log("Submitted demo work proof for worker:", workerWallet.address);
+
+  const signedPayload = ethers.solidityPackedKeccak256(
+    ["bytes32", "bytes32"],
+    [milestoneId, workHash]
+  );
+  const signature = await workerWallet.signMessage(ethers.getBytes(signedPayload));
+
+  const verifyProofTx = await verifier.verifyProof(milestoneId, signature);
+  await verifyProofTx.wait();
+  console.log("Verified demo work proof");
 
   // Save deployment addresses
   const deployments = {
@@ -60,6 +100,16 @@ async function main() {
     chainId: Number((await ethers.provider.getNetwork()).chainId),
     deployer: deployer.address,
     timestamp: new Date().toISOString(),
+    seedData: {
+      aiOracleAddress,
+      portfolioId: seededPortfolioId,
+      workProof: {
+        milestoneId,
+        workHash,
+        worker: workerWallet.address,
+        verified: await verifier.isVerified(milestoneId),
+      },
+    },
     contracts: {
       OracleAggregator: oracleAddress,
       WorkProofVerifier: verifierAddress,

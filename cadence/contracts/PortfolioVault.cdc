@@ -2,8 +2,6 @@
 // AI-managed multi-asset portfolio with risk-profile-based rebalancing.
 
 import FlowDeFiMathUtils from 0x0000000000000000
-import RuleGraph from 0x0000000000000000
-import VaultStateRegister from 0x0000000000000000
 
 access(all) contract PortfolioVault {
 
@@ -76,10 +74,8 @@ access(all) contract PortfolioVault {
 
         // Set allocation for an asset — validates sum constraint
         access(all) fun setAllocation(asset: String, percentage: UFix64) {
-            pre {
-                percentage >= 0.0: "Percentage must be non-negative"
-                percentage <= 100.0: "Percentage cannot exceed 100"
-            }
+            assert(percentage >= 0.0, message: "Percentage must be non-negative")
+            assert(percentage <= 100.0, message: "Percentage cannot exceed 100")
 
             self.allocations[asset] = percentage
 
@@ -126,10 +122,8 @@ access(all) contract PortfolioVault {
             currentPrices: {String: UFix64},
             oracleAttestation: [UInt8]
         ) {
-            pre {
-                oracleAttestation.length > 0: "Oracle attestation required"
-                self.allocations.length > 0: "No allocations set"
-            }
+            assert(oracleAttestation.length > 0, message: "Oracle attestation required")
+            assert(self.allocations.length > 0, message: "No allocations set")
 
             // Compute total portfolio value using 128-bit math
             var totalValue = 0.0
@@ -154,9 +148,12 @@ access(all) contract PortfolioVault {
                 let currentValue = FlowDeFiMathUtils.mul128(currentHolding, price)
 
                 // Compute drift percentage
-                let diff = currentValue > targetValue
-                    ? currentValue - targetValue
-                    : targetValue - currentValue
+                var diff: UFix64 = 0.0
+                if currentValue > targetValue {
+                    diff = currentValue - targetValue
+                } else {
+                    diff = targetValue - currentValue
+                }
                 let driftPct = FlowDeFiMathUtils.div128(
                     FlowDeFiMathUtils.mul128(diff, 100.0),
                     totalValue
@@ -201,11 +198,12 @@ access(all) contract PortfolioVault {
         owner: Address,
         riskProfile: String
     ): @Portfolio {
-        pre {
+        assert(
             riskProfile == "conservative" ||
             riskProfile == "moderate" ||
-            riskProfile == "aggressive": "Invalid risk profile"
-        }
+            riskProfile == "aggressive",
+            message: "Invalid risk profile"
+        )
 
         emit PortfolioCreated(
             streamId: portfolioId,

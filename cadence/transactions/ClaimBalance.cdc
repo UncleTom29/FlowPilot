@@ -12,7 +12,7 @@ transaction(streamId: String, amount: UFix64) {
     prepare(worker: auth(Storage) &Account) {
         let vaultStoragePath = StoragePath(identifier: "FlowPilotVault_".concat(streamId))!
 
-        let vault = worker.storage.borrow<auth(FlowPilotVault.Claim) &FlowPilotVault.Vault>(
+        let vault = worker.storage.borrow<&FlowPilotVault.Vault>(
             from: vaultStoragePath
         ) ?? panic("FlowPilot vault not found for stream: ".concat(streamId))
 
@@ -33,7 +33,7 @@ transaction(streamId: String, amount: UFix64) {
 
         // Update WorkCredential with cumulative earned
         let credStoragePath = StoragePath(identifier: "WorkCred_".concat(streamId))!
-        if let cred = worker.storage.borrow<auth(WorkCredential.Write) &WorkCredential.Credential>(
+        if let cred = worker.storage.borrow<&WorkCredential.Credential>(
             from: credStoragePath
         ) {
             cred.update(

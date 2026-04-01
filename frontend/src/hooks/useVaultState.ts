@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import * as fcl from '@onflow/fcl';
+import { safeNormalizeFlowAddress, withCadenceImports } from '../cadenceConfig';
 
 export interface VaultState {
   streamId: string;
@@ -82,16 +83,17 @@ export function useVaultState(userAddress: string, streamId: string) {
   });
 
   const fetchState = useCallback(async () => {
-    if (!userAddress) return;
+    const normalizedAddress = safeNormalizeFlowAddress(userAddress);
+    if (!normalizedAddress) return;
 
     try {
       setState((prev) => ({ ...prev, loading: true, error: null }));
 
       const result = await fcl.query({
-        cadence: GET_VAULT_STATE,
+        cadence: withCadenceImports(GET_VAULT_STATE),
         args: (arg: unknown, t: unknown) => [
-          (arg as Function)(userAddress, (t as Record<string, Function>)['Address']()),
-          (arg as Function)(streamId, (t as Record<string, Function>)['String']()),
+          (arg as Function)(normalizedAddress, (t as Record<string, Function>)['Address']),
+          (arg as Function)(streamId, (t as Record<string, Function>)['String']),
         ],
       });
 
@@ -119,7 +121,7 @@ export function useVaultState(userAddress: string, streamId: string) {
         error: err instanceof Error ? err.message : 'Failed to fetch vault state',
       }));
     }
-  }, [userAddress, streamId]);
+  }, [streamId, userAddress]);
 
   useEffect(() => {
     fetchState();

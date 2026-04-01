@@ -5,14 +5,17 @@
   "scripts": {
     "dev": "concurrently \"npm run dev --workspace=backend\" \"npm run dev --workspace=frontend\"",
     "deploy:emulator": "flow project deploy --network=emulator",
-    "deploy:testnet": "flow project deploy --network=testnet",
+    "flow:config:testnet": "node scripts/testnet/generateFlowConfig.mjs",
+    "deploy:testnet": "node scripts/testnet/bootstrapTestnet.mjs --cadence-only",
+    "deploy:testnet:all": "node scripts/testnet/bootstrapTestnet.mjs",
     "deploy:evm": "npx hardhat run evm/scripts/deployOracle.ts --network flowTestnet",
+    "seed:testnet": "node scripts/testnet/bootstrapTestnet.mjs --seed-only",
     "test": "jest --testPathPattern=tests/",
     "emulator": "flow emulator start"
   },
   "devDependencies": {
     "concurrently": "^8.0.0",
-    "@onflow/flow-js-testing": "^0.3.5",
+    "@onflow/flow-js-testing": "^0.6.0",
     "hardhat": "^2.22.0",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "typescript": "^5.4.0",

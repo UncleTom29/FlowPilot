@@ -22,7 +22,8 @@ flowdb/
 emulator.log
 
 # Deployments (auto-generated)
-deployments/evm-deployments.json
+deployments/
+.flow/
 
 # Editor
 .vscode/
@@ -43,3 +44,6 @@ npm-debug.log*
 
 # Coverage
 coverage/
+
+flow-tester.private.json
+flow-tester.private.json

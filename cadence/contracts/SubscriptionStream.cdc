@@ -81,19 +81,17 @@ access(all) contract SubscriptionStream {
 
         // Schedule next payment with FlowTransactionScheduler
         access(all) fun scheduleNext() {
-            pre { self.active: "Subscription is not active" }
+            assert(self.active, message: "Subscription is not active")
             self.nextPaymentTimestamp = getCurrentBlock().timestamp + self.intervalSeconds
             // FlowTransactionScheduler.schedule(...) would be called here
             // with SubscriptionHandler capability
         }
 
         // Execute payment — called by SubscriptionHandler
-        access(all) fun executePayment(vaultRef: auth(FlowPilotVault.Claim) &FlowPilotVault.Vault): @FlowToken.Vault {
-            pre {
-                self.active: "Subscription cancelled"
-                vaultRef.getClaimableTotal() >= self.amount: "Insufficient balance"
-                getCurrentBlock().timestamp >= self.nextPaymentTimestamp: "Payment not yet due"
-            }
+        access(all) fun executePayment(vaultRef: &FlowPilotVault.Vault): @FlowToken.Vault {
+            assert(self.active, message: "Subscription cancelled")
+            assert(vaultRef.getClaimableTotal() >= self.amount, message: "Insufficient balance")
+            assert(getCurrentBlock().timestamp >= self.nextPaymentTimestamp, message: "Payment not yet due")
 
             let payment <- vaultRef.claim(amount: self.amount)
             self.paymentsCompleted = self.paymentsCompleted + 1

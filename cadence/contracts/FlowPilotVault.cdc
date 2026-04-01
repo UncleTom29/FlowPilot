@@ -33,14 +33,6 @@ access(all) contract FlowPilotVault {
     )
 
     // -----------------------------------------------------------------------
-    // Entitlements
-    // -----------------------------------------------------------------------
-    access(all) entitlement Disburse
-    access(all) entitlement Claim
-    access(all) entitlement Execute
-    access(all) entitlement Write
-
-    // -----------------------------------------------------------------------
     // Storage paths
     // -----------------------------------------------------------------------
     access(all) let VaultStoragePath: StoragePath
@@ -51,12 +43,12 @@ access(all) contract FlowPilotVault {
     // Resource interfaces
     // -----------------------------------------------------------------------
     access(all) resource interface Claimable {
-        access(Claim) fun claim(amount: UFix64): @FlowToken.Vault
-        fun getClaimableTotal(): UFix64
+        access(all) fun claim(amount: UFix64): @FlowToken.Vault
+        access(all) fun getClaimableTotal(): UFix64
     }
 
     access(all) resource interface Streamable {
-        access(Execute) fun accruePerSecond(rate: UFix64, elapsed: UFix64)
+        access(all) fun accruePerSecond(rate: UFix64, elapsed: UFix64)
     }
 
     // -----------------------------------------------------------------------
@@ -91,19 +83,20 @@ access(all) contract FlowPilotVault {
             treasury: Address,
             initialFunding: @FlowToken.Vault
         ) {
+            let initialBalance = initialFunding.balance
             self.streamId = streamId
             self.employerAddress = employer
             self.workerAddress = worker
             self.yieldSplitRatio = yieldSplitRatio
             self.treasuryAddress = treasury
             self.salaryAccrued = 0.0
-            self.yieldPrincipal = 0.0
+            self.yieldPrincipal = initialBalance
             self.yieldEarned = 0.0
             self.tokenVault <- initialFunding
         }
 
         // Per-second accrual using 128-bit math (never native UFix64 multiplication for time-based math)
-        access(Execute) fun accruePerSecond(rate: UFix64, elapsed: UFix64) {
+        access(all) fun accruePerSecond(rate: UFix64, elapsed: UFix64) {
             let accrued = FlowDeFiMathUtils.mul128(rate, elapsed)
             self.salaryAccrued = self.salaryAccrued + accrued
         }
@@ -114,11 +107,9 @@ access(all) contract FlowPilotVault {
         }
 
         // Claim funds — requires Claim entitlement
-        access(Claim) fun claim(amount: UFix64): @FlowToken.Vault {
-            pre {
-                amount <= self.getClaimableTotal(): "Insufficient claimable balance"
-                amount <= self.tokenVault.balance: "Insufficient vault balance"
-            }
+        access(all) fun claim(amount: UFix64): @FlowToken.Vault {
+            assert(amount <= self.getClaimableTotal(), message: "Insufficient claimable balance")
+            assert(amount <= self.tokenVault.balance, message: "Insufficient vault balance")
             // Deduct from sub-ledgers in order: salary first, then yield
             var remaining = amount
             if self.salaryAccrued >= remaining {
@@ -134,7 +125,7 @@ access(all) contract FlowPilotVault {
                     self.yieldEarned = 0.0
                 }
             }
-            let withdrawn <- self.tokenVault.withdraw(amount: amount)
+            let withdrawn <- self.tokenVault.withdraw(amount: amount) as! @FlowToken.Vault
             emit BalanceClaimed(
                 streamId: self.streamId,
                 userAddress: self.workerAddress,
@@ -146,7 +137,7 @@ access(all) contract FlowPilotVault {
 
         // Harvest yield and apply the split ratio using 128-bit math
         access(all) fun harvestYield(rawYield: UFix64): UFix64 {
-            pre { rawYield > 0.0: "No yield to harvest" }
+            assert(rawYield > 0.0, message: "No yield to harvest")
             let workerShare = FlowDeFiMathUtils.mul128(rawYield, self.yieldSplitRatio)
             let protocolShare = rawYield - workerShare
             self.yieldEarned = self.yieldEarned + workerShare
@@ -161,7 +152,7 @@ access(all) contract FlowPilotVault {
         }
 
         // Deposit funds into the underlying vault (employer funding)
-        access(Disburse) fun deposit(from: @FlowToken.Vault) {
+        access(all) fun deposit(from: @FlowToken.Vault) {
             self.yieldPrincipal = self.yieldPrincipal + from.balance
             self.tokenVault.deposit(from: <- from)
         }
@@ -181,9 +172,9 @@ access(all) contract FlowPilotVault {
     // SettlementAuthority — only entity that can write WorkCredential
     // -----------------------------------------------------------------------
     access(all) resource SettlementAuthority {
-        access(all) let vaultRef: Capability<auth(Write) &Vault>
+        access(all) let vaultRef: Capability<&Vault>
 
-        init(vaultCap: Capability<auth(Write) &Vault>) {
+        init(vaultCap: Capability<&Vault>) {
             self.vaultRef = vaultCap
         }
 

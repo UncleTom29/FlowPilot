@@ -129,11 +129,12 @@ access(all) contract AIRebalanceHandler {
     }
 
     access(self) fun reRegister(portfolioId: String, ownerAddress: Address, riskProfile: String) {
-        let interval = riskProfile == "conservative"
-            ? PortfolioVault.CONSERVATIVE_INTERVAL
-            : riskProfile == "aggressive"
-                ? PortfolioVault.AGGRESSIVE_INTERVAL
-                : PortfolioVault.MODERATE_INTERVAL
+        var interval: UFix64 = PortfolioVault.MODERATE_INTERVAL
+        if riskProfile == "conservative" {
+            interval = PortfolioVault.CONSERVATIVE_INTERVAL
+        } else if riskProfile == "aggressive" {
+            interval = PortfolioVault.AGGRESSIVE_INTERVAL
+        }
 
         let nextFireTime = getCurrentBlock().timestamp + interval
         emit HandlerReRegistered(

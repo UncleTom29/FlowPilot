@@ -9,11 +9,11 @@ transaction(
     payeeAddress: Address,
     amount: UFix64,
     intervalSeconds: UFix64,
-    maxPayments: UInt64?,
+    maxPayments: UInt64,
     description: String,
     vaultId: String
 ) {
-    prepare(subscriber: auth(Storage) &Account) {
+    prepare(subscriber: auth(Storage, Capabilities) &Account) {
         // Verify subscriber has sufficient balance
         let vaultStoragePath = StoragePath(identifier: "FlowPilotVault_".concat(vaultId))!
         let vault = subscriber.storage.borrow<&FlowPilotVault.Vault>(
@@ -25,6 +25,11 @@ transaction(
             message: "Insufficient balance for first payment"
         )
 
+        var effectiveMaxPayments: UInt64? = nil
+        if maxPayments > 0 {
+            effectiveMaxPayments = maxPayments
+        }
+
         // Create subscription resource
         let subscription <- SubscriptionStream.createSubscription(
             subscriptionId: subscriptionId,
@@ -32,13 +37,18 @@ transaction(
             payee: payeeAddress,
             amount: amount,
             intervalSeconds: intervalSeconds,
-            maxPayments: maxPayments,
+            maxPayments: effectiveMaxPayments,
             description: description
         )
 
         // Store subscription
         let subStoragePath = StoragePath(identifier: "Subscription_".concat(subscriptionId))!
         subscriber.storage.save(<- subscription, to: subStoragePath)
+        let subPublicPath = PublicPath(identifier: "Subscription_".concat(subscriptionId))!
+        subscriber.capabilities.publish(
+            subscriber.capabilities.storage.issue<&SubscriptionStream.Subscription>(subStoragePath),
+            at: subPublicPath
+        )
 
         // Register SubscriptionHandler with FlowTransactionScheduler
         // FlowTransactionScheduler.schedule(

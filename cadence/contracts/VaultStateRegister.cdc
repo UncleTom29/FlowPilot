@@ -28,12 +28,6 @@ access(all) contract VaultStateRegister {
     )
 
     // -----------------------------------------------------------------------
-    // Entitlements
-    // -----------------------------------------------------------------------
-    access(all) entitlement Lock
-    access(all) entitlement Read
-
-    // -----------------------------------------------------------------------
     // Storage paths
     // -----------------------------------------------------------------------
     access(all) let StoragePath: StoragePath
@@ -105,7 +99,7 @@ access(all) contract VaultStateRegister {
         }
 
         // Lock a chain as active — requires Lock entitlement
-        access(Lock) fun lockChain(chainId: String) {
+        access(all) fun lockChain(chainId: String) {
             self.activeChains[chainId] = true
             emit ChainLocked(
                 streamId: self.streamId,
@@ -116,7 +110,7 @@ access(all) contract VaultStateRegister {
         }
 
         // Unlock a chain — requires Lock entitlement
-        access(Lock) fun unlockChain(chainId: String) {
+        access(all) fun unlockChain(chainId: String) {
             self.activeChains[chainId] = false
             emit ChainUnlocked(
                 streamId: self.streamId,
@@ -127,22 +121,22 @@ access(all) contract VaultStateRegister {
         }
 
         // Set yieldLocked — requires Lock entitlement
-        access(Lock) fun setYieldLocked(_ locked: Bool) {
+        access(all) fun setYieldLocked(_ locked: Bool) {
             self.yieldLocked = locked
         }
 
         // Set milestoneDisputed — requires Lock entitlement
-        access(Lock) fun setMilestoneDisputed(_ disputed: Bool) {
+        access(all) fun setMilestoneDisputed(_ disputed: Bool) {
             self.milestoneDisputed = disputed
         }
 
         // Update last rebalance timestamp
-        access(Lock) fun updateRebalanceTimestamp() {
+        access(all) fun updateRebalanceTimestamp() {
             self.lastRebalanceTimestamp = getCurrentBlock().timestamp
         }
 
         // Update last yield harvest timestamp
-        access(Lock) fun updateYieldHarvestTimestamp() {
+        access(all) fun updateYieldHarvestTimestamp() {
             self.lastYieldHarvest = getCurrentBlock().timestamp
         }
     }

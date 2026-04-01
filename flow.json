@@ -1,73 +1,25 @@
 {
-  "networks": {
-    "testnet": "access.devnet.nodes.onflow.org:9000",
-    "emulator": "127.0.0.1:3569"
-  },
-  "accounts": {
-    "testnet-account": {
-      "address": "${FLOW_TESTNET_ADDRESS}",
-      "key": "${FLOW_TESTNET_KEY}"
-    },
-    "emulator-account": {
-      "address": "f8d6e0586b0a20c7",
-      "key": "2eae2f31cb5b756151fa11d82949c634b8f28796a40d23571a3b5a20048a92b4"
-    }
-  },
-  "contracts": {
-    "FlowDeFiMathUtils": "./cadence/contracts/FlowDeFiMathUtils.cdc",
-    "FlowPilotVault": "./cadence/contracts/FlowPilotVault.cdc",
-    "RuleGraph": "./cadence/contracts/RuleGraph.cdc",
-    "WorkCredential": "./cadence/contracts/WorkCredential.cdc",
-    "LotteryPool": "./cadence/contracts/LotteryPool.cdc",
-    "GiftCardNFT": "./cadence/contracts/GiftCardNFT.cdc",
-    "SubscriptionStream": "./cadence/contracts/SubscriptionStream.cdc",
-    "PortfolioVault": "./cadence/contracts/PortfolioVault.cdc",
-    "VaultStateRegister": "./cadence/contracts/VaultStateRegister.cdc",
-    "MilestoneHandler": "./cadence/contracts/handlers/MilestoneHandler.cdc",
-    "YieldRebalanceHandler": "./cadence/contracts/handlers/YieldRebalanceHandler.cdc",
-    "DCAHandler": "./cadence/contracts/handlers/DCAHandler.cdc",
-    "LotteryDrawHandler": "./cadence/contracts/handlers/LotteryDrawHandler.cdc",
-    "SubscriptionHandler": "./cadence/contracts/handlers/SubscriptionHandler.cdc",
-    "AIRebalanceHandler": "./cadence/contracts/handlers/AIRebalanceHandler.cdc"
-  },
-  "deployments": {
-    "testnet": {
-      "testnet-account": [
-        "FlowDeFiMathUtils",
-        "FlowPilotVault",
-        "RuleGraph",
-        "WorkCredential",
-        "LotteryPool",
-        "GiftCardNFT",
-        "SubscriptionStream",
-        "PortfolioVault",
-        "VaultStateRegister",
-        "MilestoneHandler",
-        "YieldRebalanceHandler",
-        "DCAHandler",
-        "LotteryDrawHandler",
-        "SubscriptionHandler",
-        "AIRebalanceHandler"
-      ]
-    },
-    "emulator": {
-      "emulator-account": [
-        "FlowDeFiMathUtils",
-        "FlowPilotVault",
-        "RuleGraph",
-        "WorkCredential",
-        "LotteryPool",
-        "GiftCardNFT",
-        "SubscriptionStream",
-        "PortfolioVault",
-        "VaultStateRegister",
-        "MilestoneHandler",
-        "YieldRebalanceHandler",
-        "DCAHandler",
-        "LotteryDrawHandler",
-        "SubscriptionHandler",
-        "AIRebalanceHandler"
-      ]
-    }
-  }
+	"contracts": {
+		"FlowDeFiMathUtils": "./cadence/contracts/FlowDeFiMathUtils.cdc",
+		"VaultStateRegister": "./cadence/contracts/VaultStateRegister.cdc",
+		"FlowPilotVault": "./cadence/contracts/FlowPilotVault.cdc",
+		"RuleGraph": "./cadence/contracts/RuleGraph.cdc",
+		"GiftCardNFT": "./cadence/contracts/GiftCardNFT.cdc",
+		"LotteryPool": "./cadence/contracts/LotteryPool.cdc",
+		"PortfolioVault": "./cadence/contracts/PortfolioVault.cdc",
+		"SubscriptionStream": "./cadence/contracts/SubscriptionStream.cdc",
+		"WorkCredential": "./cadence/contracts/WorkCredential.cdc",
+		"AIRebalanceHandler": "./cadence/contracts/handlers/AIRebalanceHandler.cdc",
+		"DCAHandler": "./cadence/contracts/handlers/DCAHandler.cdc",
+		"LotteryDrawHandler": "./cadence/contracts/handlers/LotteryDrawHandler.cdc",
+		"MilestoneHandler": "./cadence/contracts/handlers/MilestoneHandler.cdc",
+		"SubscriptionHandler": "./cadence/contracts/handlers/SubscriptionHandler.cdc",
+		"YieldRebalanceHandler": "./cadence/contracts/handlers/YieldRebalanceHandler.cdc"
+	},
+	"networks": {
+		"emulator": "127.0.0.1:3569",
+		"testnet": "access.devnet.nodes.onflow.org:9000"
+	},
+	"accounts": {},
+	"deployments": {}
 }

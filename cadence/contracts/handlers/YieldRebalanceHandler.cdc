@@ -90,9 +90,12 @@ access(all) contract YieldRebalanceHandler {
         let currentAPR = self.getCurrentDeployedAPR(streamId: streamId)
 
         // 6. Rebalance if delta > 0.5%
-        let aprDelta = bestAPR > currentAPR
-            ? bestAPR - currentAPR
-            : currentAPR - bestAPR
+        var aprDelta: UFix64 = 0.0
+        if bestAPR > currentAPR {
+            aprDelta = bestAPR - currentAPR
+        } else {
+            aprDelta = currentAPR - bestAPR
+        }
 
         if aprDelta > self.APR_DELTA_THRESHOLD {
             let principal = vault.yieldPrincipal

@@ -1,12 +1,9 @@
 // GiftCardNFT.cdc
-// Yield-bearing gift cards as transferable NFTs with capability-gated vaults.
+// Yield-bearing gift cards stored in a lightweight custom collection.
 
-import NonFungibleToken from 0x631e88ae7f1d7c20
-import FlowToken from 0x7e60df042a9c0868
-import FungibleToken from 0x9a0766d93b6608b7
 import FlowPilotVault from 0x0000000000000000
 
-access(all) contract GiftCardNFT: NonFungibleToken {
+access(all) contract GiftCardNFT {
 
     // -----------------------------------------------------------------------
     // Events
@@ -33,11 +30,6 @@ access(all) contract GiftCardNFT: NonFungibleToken {
     access(all) event Deposit(id: UInt64, to: Address?)
 
     // -----------------------------------------------------------------------
-    // Entitlements
-    // -----------------------------------------------------------------------
-    access(all) entitlement Mint
-
-    // -----------------------------------------------------------------------
     // State
     // -----------------------------------------------------------------------
     access(all) var totalSupply: UInt64
@@ -50,12 +42,12 @@ access(all) contract GiftCardNFT: NonFungibleToken {
     access(all) let MinterStoragePath: StoragePath
 
     // -----------------------------------------------------------------------
-    // GiftCard NFT resource
+    // Gift card resource
     // -----------------------------------------------------------------------
-    access(all) resource NFT: NonFungibleToken.NFT {
+    access(all) resource NFT {
 
         access(all) let id: UInt64
-        // Capability to read balance — not to drain
+        access(all) let streamId: String
         access(all) var vaultCap: Capability<&FlowPilotVault.Vault>
         access(all) var targetDate: UFix64?
         access(all) var message: String
@@ -66,6 +58,7 @@ access(all) contract GiftCardNFT: NonFungibleToken {
 
         init(
             id: UInt64,
+            streamId: String,
             vaultCap: Capability<&FlowPilotVault.Vault>,
             targetDate: UFix64?,
             message: String,
@@ -74,6 +67,7 @@ access(all) contract GiftCardNFT: NonFungibleToken {
             principalAmount: UFix64
         ) {
             self.id = id
+            self.streamId = streamId
             self.vaultCap = vaultCap
             self.targetDate = targetDate
             self.message = message
@@ -83,7 +77,6 @@ access(all) contract GiftCardNFT: NonFungibleToken {
             self.redeemed = false
         }
 
-        // Get accrued yield — readable by anyone holding the NFT
         access(all) fun getAccruedYield(): UFix64 {
             if let vault = self.vaultCap.borrow() {
                 return vault.yieldEarned
@@ -96,33 +89,42 @@ access(all) contract GiftCardNFT: NonFungibleToken {
             return self.principalAmount + self.getAccruedYield()
         }
 
-        access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
-            return <- GiftCardNFT.createEmptyCollection(nftType: Type<@GiftCardNFT.NFT>())
+        access(all) fun markRedeemed(totalValue: UFix64, redeemer: Address) {
+            assert(!self.redeemed, message: "Gift card already redeemed")
+            self.redeemed = true
+
+            emit GiftCardRedeemed(
+                streamId: self.streamId,
+                userAddress: self.sender,
+                timestamp: getCurrentBlock().timestamp,
+                id: self.id,
+                redeemer: redeemer,
+                totalValue: totalValue
+            )
         }
     }
 
     // -----------------------------------------------------------------------
     // Collection resource
     // -----------------------------------------------------------------------
-    access(all) resource Collection: NonFungibleToken.Collection {
+    access(all) resource Collection {
 
-        access(all) var ownedNFTs: @{UInt64: {NonFungibleToken.NFT}}
+        access(all) var ownedNFTs: @{UInt64: NFT}
 
         init() {
             self.ownedNFTs <- {}
         }
 
-        access(NonFungibleToken.Withdraw) fun withdraw(withdrawID: UInt64): @{NonFungibleToken.NFT} {
+        access(all) fun withdraw(withdrawID: UInt64): @NFT {
             let token <- self.ownedNFTs.remove(key: withdrawID)
                 ?? panic("GiftCard not found")
             emit Withdraw(id: withdrawID, from: self.owner?.address)
             return <- token
         }
 
-        access(all) fun deposit(token: @{NonFungibleToken.NFT}) {
-            let card <- token as! @GiftCardNFT.NFT
-            let id = card.id
-            let old <- self.ownedNFTs[id] <- card
+        access(all) fun deposit(token: @NFT) {
+            let id = token.id
+            let old <- self.ownedNFTs[id] <- token
             destroy old
             emit Deposit(id: id, to: self.owner?.address)
         }
@@ -131,24 +133,12 @@ access(all) contract GiftCardNFT: NonFungibleToken {
             return self.ownedNFTs.keys
         }
 
-        access(all) fun borrowNFT(_ id: UInt64): &{NonFungibleToken.NFT}? {
-            return &self.ownedNFTs[id]
-        }
-
         access(all) fun borrowGiftCard(_ id: UInt64): &NFT? {
-            return self.ownedNFTs[id] as? &NFT
-        }
-
-        access(all) fun getSupportedNFTTypes(): {Type: Bool} {
-            return {Type<@GiftCardNFT.NFT>(): true}
-        }
-
-        access(all) fun isSupportedNFTType(type: Type): Bool {
-            return type == Type<@GiftCardNFT.NFT>()
-        }
-
-        access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
-            return <- GiftCardNFT.createEmptyCollection(nftType: Type<@GiftCardNFT.NFT>())
+            if self.ownedNFTs[id] == nil {
+                return nil
+            }
+            let card = &self.ownedNFTs[id] as &NFT?
+            return card
         }
     }
 
@@ -157,7 +147,8 @@ access(all) contract GiftCardNFT: NonFungibleToken {
     // -----------------------------------------------------------------------
     access(all) resource Minter {
 
-        access(Mint) fun mintGiftCard(
+        access(all) fun mintGiftCard(
+            streamId: String,
             vaultCap: Capability<&FlowPilotVault.Vault>,
             targetDate: UFix64?,
             message: String,
@@ -169,7 +160,7 @@ access(all) contract GiftCardNFT: NonFungibleToken {
             GiftCardNFT.totalSupply = GiftCardNFT.totalSupply + 1
 
             emit GiftCardMinted(
-                streamId: id.toString(),
+                streamId: streamId,
                 userAddress: sender,
                 timestamp: getCurrentBlock().timestamp,
                 id: id,
@@ -180,6 +171,7 @@ access(all) contract GiftCardNFT: NonFungibleToken {
 
             return <- create NFT(
                 id: id,
+                streamId: streamId,
                 vaultCap: vaultCap,
                 targetDate: targetDate,
                 message: message,
@@ -193,7 +185,7 @@ access(all) contract GiftCardNFT: NonFungibleToken {
     // -----------------------------------------------------------------------
     // Collection factory
     // -----------------------------------------------------------------------
-    access(all) fun createEmptyCollection(nftType: Type): @{NonFungibleToken.Collection} {
+    access(all) fun createEmptyCollection(): @Collection {
         return <- create Collection()
     }
 

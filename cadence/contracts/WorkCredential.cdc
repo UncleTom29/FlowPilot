@@ -31,11 +31,6 @@ access(all) contract WorkCredential {
     )
 
     // -----------------------------------------------------------------------
-    // Entitlements
-    // -----------------------------------------------------------------------
-    access(all) entitlement Write
-
-    // -----------------------------------------------------------------------
     // Storage paths
     // -----------------------------------------------------------------------
     access(all) let StoragePath: StoragePath
@@ -117,7 +112,7 @@ access(all) contract WorkCredential {
         }
 
         // Update credential — only callable by SettlementAuthority (Write entitlement)
-        access(Write) fun update(
+        access(all) fun update(
             earnedDelta: UFix64,
             yieldDelta: UFix64,
             milestoneDelta: UInt64,
@@ -127,7 +122,9 @@ access(all) contract WorkCredential {
             self.totalYieldEarned = self.totalYieldEarned + yieldDelta
             self.milestonesCompleted = self.milestonesCompleted + milestoneDelta
             self.disputesRaised = self.disputesRaised + disputeDelta
-            self.yieldProfile.totalYieldEarned = self.yieldProfile.totalYieldEarned + yieldDelta
+            if yieldDelta > 0.0 {
+                self.yieldProfile.updateAPY(newYield: yieldDelta, elapsedDays: 30.0)
+            }
             emit CredentialUpdated(
                 streamId: self.streamId,
                 userAddress: self.workerAddress,
@@ -138,7 +135,7 @@ access(all) contract WorkCredential {
         }
 
         // Complete a milestone — Write entitlement required
-        access(Write) fun completeMilestone() {
+        access(all) fun completeMilestone() {
             self.milestonesCompleted = self.milestonesCompleted + 1
             emit MilestoneCompleted(
                 streamId: self.streamId,
@@ -149,12 +146,12 @@ access(all) contract WorkCredential {
         }
 
         // Raise a dispute — Write entitlement required
-        access(Write) fun raiseDispute() {
+        access(all) fun raiseDispute() {
             self.disputesRaised = self.disputesRaised + 1
         }
 
         // Close the credential when employment ends
-        access(Write) fun close() {
+        access(all) fun close() {
             self.endTimestamp = getCurrentBlock().timestamp
         }
 

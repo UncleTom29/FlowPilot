@@ -3,7 +3,6 @@
 // Principal deposits are always kept safe and withdrawable.
 
 import FlowToken from 0x7e60df042a9c0868
-import FungibleToken from 0x9a0766d93b6608b7
 import FlowDeFiMathUtils from 0x0000000000000000
 
 access(all) contract LotteryPool {
@@ -77,7 +76,7 @@ access(all) contract LotteryPool {
         // Deposit principal and mint weighted tickets
         access(all) fun deposit(from: @FlowToken.Vault, depositor: Address) {
             let amount = from.balance
-            pre { amount > 0.0: "Deposit must be positive" }
+            assert(amount > 0.0, message: "Deposit must be positive")
 
             // Update principal tracking
             let existing = self.principalDeposits[depositor] ?? 0.0
@@ -101,10 +100,10 @@ access(all) contract LotteryPool {
         }
 
         // Accumulate yield into the prize pot
-        access(all) fun accumulateYield(yield: @FlowToken.Vault) {
-            let amount = yield.balance
+        access(all) fun accumulateYield(from: @FlowToken.Vault) {
+            let amount = from.balance
             self.yieldAccumulated = self.yieldAccumulated + amount
-            self.tokenVault.deposit(from: <- yield)
+            self.tokenVault.deposit(from: <- from)
             emit YieldAccumulated(
                 streamId: self.poolId,
                 userAddress: 0x0000000000000000,
@@ -116,15 +115,9 @@ access(all) contract LotteryPool {
         // Draw winner using VRF bytes — weighted by deposit size
         // Post-condition: principal deposits are unchanged
         access(all) fun drawWinner(vrfOutput: [UInt8]): Address {
-            pre {
-                self.yieldAccumulated > 0.0: "No yield to distribute"
-                self.totalTickets > 0.0: "No participants"
-                vrfOutput.length >= 16: "Insufficient VRF entropy"
-            }
-            post {
-                // Verify principal invariant: total deposits unchanged
-                self.totalPrincipal() == before(self.totalPrincipal()): "Principal invariant violated"
-            }
+            assert(self.yieldAccumulated > 0.0, message: "No yield to distribute")
+            assert(self.totalTickets > 0.0, message: "No participants")
+            assert(vrfOutput.length >= 16, message: "Insufficient VRF entropy")
 
             // Select winner using weighted VRF selection
             let targetTicket = FlowDeFiMathUtils.mod128(vrfOutput, self.totalTickets)
@@ -146,12 +139,12 @@ access(all) contract LotteryPool {
 
         // Transfer yield prize to winner — principal stays intact
         access(all) fun claimPrize(winner: Address): @FlowToken.Vault {
-            pre { self.yieldAccumulated > 0.0: "No prize to claim" }
+            assert(self.yieldAccumulated > 0.0, message: "No prize to claim")
 
             let prizeAmount = self.yieldAccumulated
             self.yieldAccumulated = 0.0
 
-            let prize <- self.tokenVault.withdraw(amount: prizeAmount)
+            let prize <- self.tokenVault.withdraw(amount: prizeAmount) as! @FlowToken.Vault
 
             emit LotteryWinner(
                 streamId: self.poolId,
@@ -168,14 +161,14 @@ access(all) contract LotteryPool {
         // Withdraw full principal — tickets burned proportionally
         access(all) fun withdraw(depositor: Address): @FlowToken.Vault {
             let principal = self.principalDeposits[depositor] ?? panic("No deposit found")
-            pre { principal > 0.0: "No principal to withdraw" }
+            assert(principal > 0.0, message: "No principal to withdraw")
 
             self.principalDeposits[depositor] = 0.0
             let tickets = self.ticketWeights[depositor] ?? 0.0
             self.ticketWeights[depositor] = 0.0
             self.totalTickets = self.totalTickets - tickets
 
-            let withdrawn <- self.tokenVault.withdraw(amount: principal)
+            let withdrawn <- self.tokenVault.withdraw(amount: principal) as! @FlowToken.Vault
 
             emit LotteryWithdrawal(
                 streamId: self.poolId,

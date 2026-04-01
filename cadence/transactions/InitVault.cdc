@@ -19,7 +19,7 @@ transaction(vaultId: String, initialDepositAmount: UFix64, yieldSplitRatio: UFix
         )
 
         // Withdraw initial deposit
-        let userFlowVault = user.storage.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)
+        let userFlowVault = user.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(from: /storage/flowTokenVault)
             ?? panic("Could not borrow user's FlowToken vault")
 
         let deposit <- userFlowVault.withdraw(amount: initialDepositAmount) as! @FlowToken.Vault
@@ -35,6 +35,11 @@ transaction(vaultId: String, initialDepositAmount: UFix64, yieldSplitRatio: UFix
         )
 
         user.storage.save(<- vault, to: vaultStoragePath)
+        let vaultPublicPath = PublicPath(identifier: "FlowPilotVault_".concat(vaultId))!
+        user.capabilities.publish(
+            user.capabilities.storage.issue<&FlowPilotVault.Vault>(vaultStoragePath),
+            at: vaultPublicPath
+        )
 
         // Create state register
         let stateStoragePath = StoragePath(identifier: "VaultState_".concat(vaultId))!
@@ -43,11 +48,21 @@ transaction(vaultId: String, initialDepositAmount: UFix64, yieldSplitRatio: UFix
             owner: user.address
         )
         user.storage.save(<- stateRegister, to: stateStoragePath)
+        let statePublicPath = PublicPath(identifier: "VaultState_".concat(vaultId))!
+        user.capabilities.publish(
+            user.capabilities.storage.issue<&VaultStateRegister.StateRegister>(stateStoragePath),
+            at: statePublicPath
+        )
 
         // Create rule graph
         let graphStoragePath = StoragePath(identifier: "RuleGraph_".concat(vaultId))!
         let graph <- RuleGraph.createGraph(graphId: vaultId, owner: user.address)
         user.storage.save(<- graph, to: graphStoragePath)
+        let graphPublicPath = PublicPath(identifier: "RuleGraph_".concat(vaultId))!
+        user.capabilities.publish(
+            user.capabilities.storage.issue<&RuleGraph.Graph>(graphStoragePath),
+            at: graphPublicPath
+        )
 
         log("Vault initialized: ".concat(vaultId))
     }

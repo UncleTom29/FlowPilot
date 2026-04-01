@@ -5,13 +5,19 @@ import AddRuleModal from './AddRuleModal';
 import { useVaultState } from '../hooks/useVaultState';
 import { useRules } from '../hooks/useRules';
 import * as fcl from '@onflow/fcl';
+import { withCadenceImports } from '../cadenceConfig';
 
 interface BalanceDashboardProps {
   userAddress: string;
   streamId: string;
+  readOnly?: boolean;
 }
 
-const BalanceDashboard: React.FC<BalanceDashboardProps> = ({ userAddress, streamId }) => {
+const BalanceDashboard: React.FC<BalanceDashboardProps> = ({
+  userAddress,
+  streamId,
+  readOnly = false,
+}) => {
   const vaultState = useVaultState(userAddress, streamId);
   const { rules, removeRule, refetch: refetchRules, loading: rulesLoading } = useRules(
     userAddress,
@@ -25,12 +31,13 @@ const BalanceDashboard: React.FC<BalanceDashboardProps> = ({ userAddress, stream
   const ratePerSecond = 0.000772;  // ~$2000/month in FLOW
 
   const handleClaimAll = async () => {
-    if (claiming || vaultState.claimableTotal <= 0) return;
+    if (readOnly || claiming || vaultState.claimableTotal <= 0) return;
     setClaiming(true);
     try {
       const txId = await fcl.mutate({
-        cadence: `
+        cadence: withCadenceImports(`
 import FlowToken from 0x7e60df042a9c0868
+import FungibleToken from 0x9a0766d93b6608b7
 import FlowPilotVault from 0x0000000000000000
 
 transaction(streamId: String, amount: UFix64) {
@@ -43,10 +50,10 @@ transaction(streamId: String, amount: UFix64) {
       ?? panic("Receiver not found")
     receiver.deposit(from: <- claimed)
   }
-}`,
+}`),
         args: (arg: unknown, t: unknown) => [
-          (arg as Function)(streamId, (t as Record<string, Function>)['String']()),
-          (arg as Function)(vaultState.claimableTotal.toFixed(8), (t as Record<string, Function>)['UFix64']()),
+          (arg as Function)(streamId, (t as Record<string, Function>)['String']),
+          (arg as Function)(vaultState.claimableTotal.toFixed(8), (t as Record<string, Function>)['UFix64']),
         ],
         limit: 9999,
       });
@@ -58,9 +65,6 @@ transaction(streamId: String, amount: UFix64) {
       setClaiming(false);
     }
   };
-
-  const totalBalance =
-    vaultState.salaryAccrued + vaultState.yieldEarned + vaultState.yieldPrincipal;
 
   return (
     <div style={styles.container}>
@@ -76,12 +80,12 @@ transaction(streamId: String, amount: UFix64) {
         <button
           style={{
             ...styles.claimButton,
-            opacity: claiming || vaultState.claimableTotal <= 0 ? 0.5 : 1,
+            opacity: readOnly || claiming || vaultState.claimableTotal <= 0 ? 0.5 : 1,
           }}
           onClick={handleClaimAll}
-          disabled={claiming || vaultState.claimableTotal <= 0}
+          disabled={readOnly || claiming || vaultState.claimableTotal <= 0}
         >
-          {claiming ? 'Claiming...' : '💸 Withdraw All'}
+          {readOnly ? 'Read-Only Demo' : claiming ? 'Claiming...' : '💸 Withdraw All'}
         </button>
       </div>
 
@@ -114,6 +118,12 @@ transaction(streamId: String, amount: UFix64) {
         </div>
       )}
 
+      {readOnly && (
+        <div style={styles.infoBanner}>
+          Viewing a seeded Flow testnet demo account. Connect the matching account to claim funds or change rules.
+        </div>
+      )}
+
       {/* Active rules section */}
       <div style={styles.rulesSection}>
         <div style={styles.rulesSectionHeader}>
@@ -122,13 +132,19 @@ transaction(streamId: String, amount: UFix64) {
         </div>
 
         {/* Add rule input */}
-        <button
-          style={styles.addRuleButton}
-          onClick={() => setShowAddRule(true)}
-        >
-          <span style={styles.addRuleIcon}>+</span>
-          Add a rule in plain English...
-        </button>
+        {readOnly ? (
+          <div style={styles.readOnlyCard}>
+            Rule editing is disabled in demo mode.
+          </div>
+        ) : (
+          <button
+            style={styles.addRuleButton}
+            onClick={() => setShowAddRule(true)}
+          >
+            <span style={styles.addRuleIcon}>+</span>
+            Add a rule in plain English...
+          </button>
+        )}
 
         {/* Rules list */}
         {rulesLoading && rules.length === 0 ? (
@@ -147,7 +163,7 @@ transaction(streamId: String, amount: UFix64) {
                 key={rule.id}
                 rule={rule}
                 status={vaultState.milestoneDisputed ? 'disputed' : 'active'}
-                onDelete={removeRule}
+                onDelete={readOnly ? undefined : removeRule}
               />
             ))}
           </div>
@@ -155,7 +171,7 @@ transaction(streamId: String, amount: UFix64) {
       </div>
 
       {/* Add rule modal */}
-      {showAddRule && (
+      {showAddRule && !readOnly && (
         <AddRuleModal
           userAddress={userAddress}
           streamId={streamId}
@@ -232,6 +248,14 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     color: '#ff9e9e',
   },
+  infoBanner: {
+    background: 'rgba(91,141,238,0.12)',
+    border: '1px solid rgba(91,141,238,0.3)',
+    borderRadius: 10,
+    padding: '12px 16px',
+    fontSize: 14,
+    color: '#bdd0ff',
+  },
   rulesSection: {
     display: 'flex',
     flexDirection: 'column',
@@ -271,6 +295,14 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 20,
     color: '#00ef8b',
     lineHeight: 1,
+  },
+  readOnlyCard: {
+    background: 'rgba(255,255,255,0.03)',
+    border: '1px dashed rgba(255,255,255,0.12)',
+    borderRadius: 12,
+    padding: '16px 20px',
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 14,
   },
   loadingText: {
     color: 'rgba(255,255,255,0.3)',
