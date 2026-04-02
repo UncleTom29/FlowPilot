@@ -357,6 +357,13 @@ button {
   height: 14px;
 }
 
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 .btn-primary {
   background: var(--green);
   color: var(--bg);
@@ -392,6 +399,50 @@ button {
 .content {
   flex: 1;
   padding: 24px 28px 40px;
+}
+
+.mode-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  margin-bottom: 20px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015));
+}
+
+.mode-banner.live {
+  background: linear-gradient(135deg, rgba(77, 159, 255, 0.14), rgba(0, 229, 160, 0.08));
+}
+
+.mode-banner.degraded {
+  background: linear-gradient(135deg, rgba(245, 166, 35, 0.14), rgba(77, 159, 255, 0.06));
+}
+
+.mode-copy {
+  min-width: 0;
+}
+
+.mode-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+}
+
+.mode-text {
+  margin-top: 6px;
+  color: var(--text2);
+  max-width: 760px;
+}
+
+.mode-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .view-stack {
@@ -505,6 +556,10 @@ button {
   font-size: 12px;
 }
 
+.metric-sub.strong {
+  color: var(--text);
+}
+
 .stat-sub.up {
   color: var(--green);
 }
@@ -601,6 +656,56 @@ button {
   background: var(--bg4);
   border: 1px solid var(--border);
   border-radius: 12px;
+}
+
+.track-grid,
+.proof-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.account-resource-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.track-card.blue {
+  background: linear-gradient(180deg, rgba(77, 159, 255, 0.12), rgba(255, 255, 255, 0.02));
+}
+
+.track-card.green {
+  background: linear-gradient(180deg, rgba(0, 229, 160, 0.12), rgba(255, 255, 255, 0.02));
+}
+
+.track-card.amber {
+  background: linear-gradient(180deg, rgba(245, 166, 35, 0.12), rgba(255, 255, 255, 0.02));
+}
+
+.resource-card.green {
+  background: linear-gradient(180deg, rgba(0, 229, 160, 0.1), rgba(255, 255, 255, 0.02));
+}
+
+.resource-card.blue {
+  background: linear-gradient(180deg, rgba(77, 159, 255, 0.1), rgba(255, 255, 255, 0.02));
+}
+
+.resource-card.purple {
+  background: linear-gradient(180deg, rgba(167, 139, 250, 0.1), rgba(255, 255, 255, 0.02));
+}
+
+.resource-card.amber {
+  background: linear-gradient(180deg, rgba(245, 166, 35, 0.1), rgba(255, 255, 255, 0.02));
+}
+
+.resource-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.track-proof {
+  display: block;
+  margin-top: 10px;
+  line-height: 1.55;
 }
 
 .tp-val,
@@ -953,6 +1058,8 @@ button {
 @media (max-width: 1120px) {
   .stats-grid,
   .grid-3,
+  .track-grid,
+  .proof-grid,
   .kpi-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -977,11 +1084,17 @@ button {
   .content {
     padding-inline: 18px;
   }
+
+  .mode-banner {
+    flex-direction: column;
+  }
 }
 
 @media (max-width: 720px) {
   .stats-grid,
   .grid-3,
+  .track-grid,
+  .proof-grid,
   .kpi-strip,
   .form-grid,
   .ticker-pills {

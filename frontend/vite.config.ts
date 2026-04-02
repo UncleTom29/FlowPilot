@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  envDir: path.resolve(__dirname, '..'),
+  envDir: process.env.VERCEL ? __dirname : path.resolve(__dirname, '..'),
   define: {
     global: 'globalThis',
   },
@@ -20,5 +20,13 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom'],
+          flow: ['@onflow/fcl', '@onflow/types'],
+        },
+      },
+    },
   },
 });

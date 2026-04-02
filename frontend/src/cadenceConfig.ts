@@ -1,3 +1,5 @@
+import { DEPLOYMENT_SNAPSHOT_STATE } from './lib/deploymentState';
+
 const PLACEHOLDER_ADDRESS = '0x0000000000000000';
 const PLACEHOLDER_IMPORT_PATTERN = new RegExp(
   `(import\\s+[^\\n]+?\\s+from\\s+)${PLACEHOLDER_ADDRESS}`,
@@ -19,11 +21,18 @@ export function safeNormalizeFlowAddress(value: string | null | undefined): stri
     return '';
   }
 
-  return normalizeFlowAddress(value);
+  try {
+    return normalizeFlowAddress(value);
+  } catch {
+    return '';
+  }
 }
 
 export function getCadenceContractAddress(): string {
-  const configuredAddress = import.meta.env.VITE_FLOW_CONTRACT_ADDRESS;
+  const configuredAddress =
+    import.meta.env.VITE_FLOW_CONTRACT_ADDRESS ??
+    DEPLOYMENT_SNAPSHOT_STATE.cadence?.contractAddress ??
+    '';
 
   if (!configuredAddress) {
     throw new Error(
@@ -39,9 +48,17 @@ export function withCadenceImports(cadence: string): string {
 }
 
 export function getDashboardStreamId(): string {
-  return import.meta.env.VITE_FLOW_DASHBOARD_STREAM_ID ?? 'default';
+  return (
+    import.meta.env.VITE_FLOW_DASHBOARD_STREAM_ID ??
+    DEPLOYMENT_SNAPSHOT_STATE.cadence?.streamId ??
+    ''
+  );
 }
 
-export function getDemoDashboardAccount(): string {
-  return safeNormalizeFlowAddress(import.meta.env.VITE_FLOW_DASHBOARD_ACCOUNT_ADDRESS ?? '');
+export function getSeededDashboardAccount(): string {
+  return safeNormalizeFlowAddress(
+    import.meta.env.VITE_FLOW_DASHBOARD_ACCOUNT_ADDRESS ??
+      DEPLOYMENT_SNAPSHOT_STATE.cadence?.accountAddress ??
+      ''
+  );
 }

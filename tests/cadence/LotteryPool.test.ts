@@ -13,8 +13,9 @@ import {
   emulator,
 } from '@onflow/flow-js-testing';
 import * as path from 'path';
+import { describeCadenceSuite, stopEmulatorSafely } from '../helpers/flowCliSupport';
 
-describe('LotteryPool', () => {
+describeCadenceSuite('LotteryPool', () => {
   let deployer: string;
   let user1: string;
   let user2: string;
@@ -41,7 +42,7 @@ describe('LotteryPool', () => {
   });
 
   afterAll(async () => {
-    await emulator.stop();
+    await stopEmulatorSafely(emulator);
   });
 
   describe('Pool Creation', () => {

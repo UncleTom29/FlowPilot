@@ -10,13 +10,70 @@ const execFileAsync = promisify(execFile);
 const ROOT_DIR = path.resolve(__dirname, '../..');
 const FLOW_CONFIG_PATH = path.join(ROOT_DIR, '.flow', 'testnet.flow.json');
 const DEPLOYMENTS_DIR = path.join(ROOT_DIR, 'deployments');
-const FLOW_BIN = '/opt/homebrew/bin/flow';
+const FLOW_BIN =
+  process.env.FLOW_BIN ||
+  (process.platform === 'darwin' ? '/opt/homebrew/bin/flow' : 'flow');
+const FLOW_NETWORK = 'testnet';
+const FLOW_ACCESS_NODE = process.env.FLOW_ACCESS_NODE || 'access.devnet.nodes.onflow.org:9000';
+
+function normalizeFlowAddress(value: string): string {
+  const normalized = value.trim().replace(/^0x/i, '').toLowerCase();
+
+  if (!/^[0-9a-f]{16}$/.test(normalized)) {
+    throw new Error(`Invalid Flow address: ${value}`);
+  }
+
+  return normalized;
+}
+
+function normalizePrivateKey(value: string): string {
+  const normalized = value.trim().replace(/^0x/i, '');
+
+  if (!/^[0-9a-fA-F]{64}$/.test(normalized)) {
+    throw new Error('Invalid Flow private key: expected a 64-byte hex string');
+  }
+
+  return normalized.toLowerCase();
+}
+
+async function writeFlowConfigFromEnv() {
+  const address = process.env.FLOW_TESTNET_ADDRESS;
+  const key = process.env.FLOW_TESTNET_KEY;
+  const accountName = process.env.FLOW_TESTNET_ACCOUNT_NAME || 'flowpilot-testnet';
+
+  if (!address || !key) {
+    throw new Error(
+      'Missing Flow signer configuration. Set FLOW_TESTNET_ADDRESS and FLOW_TESTNET_KEY for the managed relay.'
+    );
+  }
+
+  await fs.mkdir(path.dirname(FLOW_CONFIG_PATH), { recursive: true });
+  await fs.writeFile(
+    FLOW_CONFIG_PATH,
+    `${JSON.stringify(
+      {
+        networks: {
+          [FLOW_NETWORK]: FLOW_ACCESS_NODE,
+        },
+        accounts: {
+          [accountName]: {
+            address: normalizeFlowAddress(address),
+            key: normalizePrivateKey(key),
+          },
+        },
+      },
+      null,
+      2
+    )}\n`,
+    'utf8'
+  );
+}
 
 async function ensureConfigured() {
   try {
     await fs.access(FLOW_CONFIG_PATH);
   } catch {
-    throw new Error('Missing .flow/testnet.flow.json. Run npm run deploy:testnet first.');
+    await writeFlowConfigFromEnv();
   }
 }
 
@@ -133,7 +190,7 @@ export async function sendTransactionFile(
       '--config-path',
       FLOW_CONFIG_PATH,
       '--network',
-      'testnet',
+      FLOW_NETWORK,
       '--signer',
       signerName,
       '--gas-limit',
@@ -172,5 +229,7 @@ export async function getDeploymentState() {
     evm,
     signer,
     ready: Boolean(cadence),
+    accessNode: FLOW_ACCESS_NODE,
+    relayReady: Boolean(process.env.FLOW_TESTNET_ADDRESS && process.env.FLOW_TESTNET_KEY),
   };
 }

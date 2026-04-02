@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import * as fcl from '@onflow/fcl';
 import { safeNormalizeFlowAddress, withCadenceImports } from '../cadenceConfig';
+import { parseRuleClientSide } from '../lib/clientRulePreview';
+import { getApiUrl, hasConfiguredBackend } from '../lib/runtimeConfig';
 
 type RuleParamValue =
   | string
@@ -24,8 +26,6 @@ export interface RulesState {
   loading: boolean;
   error: string | null;
 }
-
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:3001';
 
 function normalizeRuleType(rawType: string): string {
   switch (rawType) {
@@ -159,12 +159,24 @@ export function useRules(userAddress: string, streamId: string) {
    * Parse a natural language rule via the backend NL compiler.
    */
   const parseRule = useCallback(async (text: string) => {
-    const res = await fetch(`${BACKEND_URL}/api/parse-rule`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
-    });
-    return res.json();
+    if (!hasConfiguredBackend()) {
+      return parseRuleClientSide(text);
+    }
+
+    try {
+      const res = await fetch(getApiUrl('/api/parse-rule'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      const payload = await res.json();
+      if (!res.ok) {
+        throw new Error(payload.error?.message ?? payload.error ?? 'Failed to parse rule');
+      }
+      return payload;
+    } catch {
+      return parseRuleClientSide(text);
+    }
   }, []);
 
   /**
@@ -172,12 +184,19 @@ export function useRules(userAddress: string, streamId: string) {
    */
   const createRule = useCallback(
     async (text: string) => {
-      const res = await fetch(`${BACKEND_URL}/api/create-rule`, {
+      if (!hasConfiguredBackend()) {
+        throw new Error('Transaction relay is unavailable. Reconnect the operator service to deploy new rules.');
+      }
+
+      const res = await fetch(getApiUrl('/api/create-rule'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, streamId, userAddress, relay: true }),
       });
       const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error?.message ?? data.error ?? 'Failed to deploy rule');
+      }
       if (data.success) {
         await fetchRules();
       }

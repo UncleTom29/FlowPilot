@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "prebuild": "node -e \"const fs=require('fs'); const path='../scripts/testnet/exportFrontendDemoState.mjs'; if (!fs.existsSync(path)) { console.log('Using checked-in demo deployment artifact.'); process.exit(0); } const { spawnSync } = require('child_process'); const result = spawnSync(process.execPath, [path], { stdio: 'inherit' }); process.exit(result.status ?? 0);\"",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",

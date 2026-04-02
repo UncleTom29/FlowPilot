@@ -120,7 +120,7 @@ transaction(streamId: String, amount: UFix64) {
 
       {readOnly && (
         <div style={styles.infoBanner}>
-          Viewing a seeded Flow testnet demo account. Connect the matching account to claim funds or change rules.
+          Viewing a seeded Flow testnet account. Connect the matching operator account to claim funds or change rules.
         </div>
       )}
 
@@ -134,7 +134,7 @@ transaction(streamId: String, amount: UFix64) {
         {/* Add rule input */}
         {readOnly ? (
           <div style={styles.readOnlyCard}>
-            Rule editing is disabled in demo mode.
+            Rule editing becomes available when the operator signer is connected.
           </div>
         ) : (
           <button

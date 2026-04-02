@@ -15,8 +15,9 @@ import {
   emulator,
 } from '@onflow/flow-js-testing';
 import * as path from 'path';
+import { describeCadenceSuite, stopEmulatorSafely } from '../helpers/flowCliSupport';
 
-describe('FlowPilotVault', () => {
+describeCadenceSuite('FlowPilotVault', () => {
   let employer: string;
   let worker: string;
   let streamId: string;
@@ -36,7 +37,7 @@ describe('FlowPilotVault', () => {
   });
 
   afterAll(async () => {
-    await emulator.stop();
+    await stopEmulatorSafely(emulator);
   });
 
   describe('Contract Deployment', () => {

@@ -14,8 +14,17 @@ import {
 } from './flowCli';
 
 const app = express();
-const PORT = process.env.BACKEND_PORT ? parseInt(process.env.BACKEND_PORT) : 3001;
-const ALLOWED_ORIGINS = new Set(['http://localhost:5173', 'http://127.0.0.1:5173']);
+const PORT = parseInt(process.env.PORT ?? process.env.BACKEND_PORT ?? '3001', 10);
+const configuredOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const ALLOWED_ORIGINS = new Set([
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  ...configuredOrigins,
+]);
+const VERCEL_PREVIEW_ORIGIN = /^https:\/\/[a-z0-9-]+(?:-[a-z0-9-]+)*\.vercel\.app$/i;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Middleware
@@ -23,7 +32,7 @@ const ALLOWED_ORIGINS = new Set(['http://localhost:5173', 'http://127.0.0.1:5173
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || ALLOWED_ORIGINS.has(origin)) {
+    if (!origin || ALLOWED_ORIGINS.has(origin) || VERCEL_PREVIEW_ORIGIN.test(origin)) {
       callback(null, true);
       return;
     }
@@ -395,8 +404,8 @@ app.use((err: Error, _req: Request, res: Response, _next: unknown) => {
 // Start server
 // ─────────────────────────────────────────────────────────────────────────────
 
-app.listen(PORT, () => {
-  console.log(`FlowPilot Backend running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`FlowPilot Backend running on port ${PORT}`);
   console.log(`Network: ${process.env.VITE_FLOW_NETWORK ?? 'testnet'}`);
   console.log(`Managed signer: ${process.env.FLOW_TESTNET_ACCOUNT_NAME ?? 'flowpilot-testnet'}`);
 });

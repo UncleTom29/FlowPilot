@@ -2,19 +2,19 @@ import React, { useEffect, useMemo, useState } from 'react';
 import './app.css';
 import {
   getDashboardStreamId,
-  getDemoDashboardAccount,
+  getSeededDashboardAccount,
   safeNormalizeFlowAddress,
 } from './cadenceConfig';
 import { useVaultState } from './hooks/useVaultState';
 import { useRules } from './hooks/useRules';
-import { useDeploymentState, type ActivityItem } from './hooks/useDeploymentState';
+import { useDeploymentState } from './hooks/useDeploymentState';
 import { useLotteryPool } from './hooks/useLotteryPool';
 import { useGiftCards } from './hooks/useGiftCards';
 import { useWorkCredential } from './hooks/useWorkCredential';
 import { usePortfolio } from './hooks/usePortfolio';
 import { useSubscriptions } from './hooks/useSubscriptions';
-
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:3001';
+import type { ActivityItem } from './lib/deploymentState';
+import { getApiUrl, getConfiguredBackendUrl, hasConfiguredBackend } from './lib/runtimeConfig';
 
 type ViewKey =
   | 'dashboard'
@@ -26,7 +26,8 @@ type ViewKey =
   | 'subscriptions'
   | 'lottery'
   | 'giftcards'
-  | 'credential';
+  | 'credential'
+  | 'account';
 
 type ToastState = {
   kind: 'success' | 'error';
@@ -41,6 +42,30 @@ type NavItem = {
   badgeTone?: 'amber' | 'blue' | 'purple';
   icon: React.ReactNode;
 };
+
+type AccountWorkspace = {
+  displayName: string;
+  notificationChannel: string;
+  payoutAddress: string;
+  preferredRisk: string;
+  autoClaimThreshold: string;
+  settlementCadence: string;
+  treasuryPolicy: string;
+};
+
+const ACCOUNT_WORKSPACE_KEY = 'flowpilot.account.workspace';
+
+function defaultAccountWorkspace(payoutAddress = ''): AccountWorkspace {
+  return {
+    displayName: 'FlowPilot Operator',
+    notificationChannel: 'ops@flowpilot.finance',
+    payoutAddress,
+    preferredRisk: 'moderate',
+    autoClaimThreshold: '50',
+    settlementCadence: 'weekly',
+    treasuryPolicy: 'Protect principal, compound yield, and keep scheduled obligations continuously funded.',
+  };
+}
 
 function clamp(value: number, min = 0, max = 100): number {
   return Math.min(max, Math.max(min, value));
@@ -77,15 +102,15 @@ function relativeTime(timestamp: string): string {
 }
 
 async function postJson<T>(endpoint: string, body: Record<string, unknown>): Promise<T> {
-  const response = await fetch(`${BACKEND_URL}${endpoint}`, {
+  const response = await fetch(getApiUrl(endpoint), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
 
-  const payload = await response.json();
+  const payload = await response.json().catch(() => null);
   if (!response.ok || !payload.success) {
-    throw new Error(payload.error ?? 'Request failed');
+    throw new Error(payload?.error?.message ?? payload?.error ?? 'Request failed');
   }
   return payload as T;
 }
@@ -109,6 +134,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'lottery', label: 'Lottery', section: 'Features', badge: 'Draw soon', badgeTone: 'amber', icon: icon('M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm-1 13-3-3 1.5-1.5L11 12l4.5-4.5L17 9Z') },
   { key: 'giftcards', label: 'Gift Cards', section: 'Features', icon: icon('M20 12v10H4V12M22 7H2v5h20V7M12 22V7M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7Zm0 0h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7Z') },
   { key: 'credential', label: 'Credential', section: 'Features', icon: icon('M2 7h20v14H2zM7 3h10v4H7zM12 13a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z') },
+  { key: 'account', label: 'Account', section: 'Operations', badge: 'Manage', badgeTone: 'blue', icon: icon('M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4.418 0-8 2.239-8 5v1h16v-1c0-2.761-3.582-5-8-5Z') },
 ];
 
 const PAGE_COPY: Record<ViewKey, { title: string; subtitle: string }> = {
@@ -122,16 +148,17 @@ const PAGE_COPY: Record<ViewKey, { title: string; subtitle: string }> = {
   lottery: { title: 'Lottery', subtitle: 'Lossless prize pool seeded from real testnet activity' },
   giftcards: { title: 'Gift Cards', subtitle: 'Yield-bearing cards minted from the treasury vault' },
   credential: { title: 'Credential', subtitle: 'Your non-transferable on-chain work and finance identity' },
+  account: { title: 'Account', subtitle: 'Operator settings, live resource health, and deployment controls' },
 };
 
 const App: React.FC = () => {
   const deployment = useDeploymentState();
   const seededAccount = safeNormalizeFlowAddress(
-    deployment.data?.cadence?.accountAddress ?? getDemoDashboardAccount()
+    deployment.data?.cadence?.accountAddress ?? getSeededDashboardAccount()
   );
   const streamId = deployment.data?.cadence?.streamId ?? getDashboardStreamId();
-  const poolId = deployment.data?.cadence?.poolId ?? (import.meta.env.VITE_FLOW_DASHBOARD_LOTTERY_ID ?? 'primary-pool');
-  const portfolioId = deployment.data?.cadence?.portfolioId ?? (import.meta.env.VITE_FLOW_DASHBOARD_PORTFOLIO_ID ?? 'core-portfolio');
+  const poolId = deployment.data?.cadence?.poolId ?? (import.meta.env.VITE_FLOW_DASHBOARD_LOTTERY_ID ?? '');
+  const portfolioId = deployment.data?.cadence?.portfolioId ?? (import.meta.env.VITE_FLOW_DASHBOARD_PORTFOLIO_ID ?? '');
   const [activeView, setActiveView] = useState<ViewKey>('dashboard');
   const [toast, setToast] = useState<ToastState>(null);
   const [now, setNow] = useState(Date.now());
@@ -152,6 +179,7 @@ const App: React.FC = () => {
   const [rulePreview, setRulePreview] = useState<Record<string, unknown> | null>(null);
   const [rulePreviewLoading, setRulePreviewLoading] = useState(false);
   const [actionBusy, setActionBusy] = useState<string | null>(null);
+  const [accountWorkspace, setAccountWorkspace] = useState<AccountWorkspace>(() => defaultAccountWorkspace());
 
   const vault = useVaultState(seededAccount, streamId);
   const rules = useRules(seededAccount, streamId);
@@ -175,9 +203,31 @@ const App: React.FC = () => {
   }, [toast]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      const stored = window.localStorage.getItem(ACCOUNT_WORKSPACE_KEY);
+      if (!stored) {
+        return;
+      }
+
+      const parsed = JSON.parse(stored) as Partial<AccountWorkspace>;
+      setAccountWorkspace((current) => ({ ...current, ...parsed }));
+    } catch {
+      // Ignore corrupted local operator preferences and keep defaults.
+    }
+  }, []);
+
+  useEffect(() => {
     if (seededAccount) {
       setGiftRecipient((current) => current || seededAccount);
       setSubscriptionPayee((current) => current || seededAccount);
+      setAccountWorkspace((current) => ({
+        ...current,
+        payoutAddress: current.payoutAddress || seededAccount,
+      }));
     }
   }, [seededAccount]);
 
@@ -198,6 +248,10 @@ const App: React.FC = () => {
       try {
         setRulePreviewLoading(true);
         const preview = await rules.parseRule(ruleText);
+        if ((preview as { success?: boolean }).success === false) {
+          setRulePreview(null);
+          return;
+        }
         setRulePreview(preview);
       } catch {
         setRulePreview(null);
@@ -210,13 +264,20 @@ const App: React.FC = () => {
   }, [ruleOpen, ruleText, rules.parseRule]);
 
   const mergedActivity = useMemo(() => {
-    const persisted = deployment.data?.cadence?.activity ?? [];
+    const persisted = deployment.source === 'backend'
+      ? deployment.data?.cadence?.activity ?? []
+      : [];
     return [...localActivity, ...persisted].sort(
       (left, right) => new Date(String(right.timestamp)).getTime() - new Date(String(left.timestamp)).getTime()
     );
-  }, [deployment.data?.cadence?.activity, localActivity]);
+  }, [deployment.data?.cadence?.activity, deployment.source, localActivity]);
 
-  const salaryPerSecond = parseFloat(import.meta.env.VITE_FLOW_DASHBOARD_SALARY_RATE ?? '0.000772');
+  const verificationSummary = deployment.data?.cadence?.verificationSummary ?? {};
+  const salaryPerSecond = Number(
+    verificationSummary.salaryRatePerSecond ??
+    import.meta.env.VITE_FLOW_DASHBOARD_SALARY_RATE ??
+    0
+  );
   const yieldPerSecond = credential.data ? credential.data.totalYieldEarned / Math.max(credential.data.durationSeconds, 1) : 0;
   const totalPerSecond = salaryPerSecond + yieldPerSecond;
   const savingsShare = clamp((vault.yieldPrincipal / Math.max(vault.tokenBalance, 1)) * 100);
@@ -238,6 +299,106 @@ const App: React.FC = () => {
   };
   const workProof = deployment.data?.evm?.seedData?.workProof as Record<string, unknown> | undefined;
   const oraclePortfolioId = deployment.data?.evm?.seedData?.portfolioId as string | undefined;
+  const relayConfigured = hasConfiguredBackend();
+  const relayEndpoint = getConfiguredBackendUrl();
+  const relayUnavailable = !deployment.relayAvailable;
+  const modeTitle = deployment.relayAvailable ? 'Operations network online' : 'Live state synchronized';
+  const modeDescription = deployment.relayAvailable
+    ? 'FlowPilot is reading deployed Flow resources live and routing sponsored transactions through the managed operator relay.'
+    : relayConfigured
+      ? 'FlowPilot is reading deployed Flow resources live. The transaction relay is reconnecting, so write actions stay protected until the operator service is reachable again.'
+      : 'FlowPilot is reading deployed Flow resources live. This environment is synchronized for monitoring and account management until a transaction relay is attached.';
+  const actionHint = deployment.relayAvailable
+    ? 'Sponsored by FlowPilot'
+    : relayConfigured
+      ? 'Transaction relay is reconnecting. Write actions will resume automatically.'
+      : 'Attach an operator relay to enable sponsored write actions.';
+  const averageApy =
+    credential.data?.averageAPY ??
+    Number(verificationSummary.averageAPY ?? verificationSummary.apy ?? 0);
+  const platformHighlights = [
+    {
+      title: 'Consumer automation',
+      subtitle: 'Everyday finance without manual steps',
+      tone: 'blue',
+      proof: `Gas sponsorship, live Cadence resources, and treasury autopilots remain anchored at ${shortAddress(seededAccount)}.`,
+    },
+    {
+      title: 'Accountable AI',
+      subtitle: 'Human-readable automation with explicit guardrails',
+      tone: 'green',
+      proof: `Natural-language rules compile into explicit actions, work proofs remain ${workProof?.verified ? 'verified' : 'visible'}, and disputes or yield locks preserve operator control.`,
+    },
+    {
+      title: 'Programmable coordination',
+      subtitle: 'Treasury, payouts, and incentives on shared rails',
+      tone: 'amber',
+      proof: 'Subscriptions, portfolio logic, lottery incentives, and yield-backed gift cards operate as interoperable on-chain objects.',
+    },
+  ];
+  const networkReferences = [
+    {
+      label: 'Managed account',
+      value: shortAddress(seededAccount),
+      href: seededAccount ? `https://testnet.flowscan.io/account/${seededAccount}` : null,
+    },
+    {
+      label: 'Cadence contracts',
+      value: shortAddress(deployment.data?.cadence?.contractAddress ?? seededAccount),
+      href: deployment.data?.cadence?.contractAddress
+        ? `https://testnet.flowscan.io/account/${deployment.data.cadence.contractAddress}`
+        : null,
+    },
+    {
+      label: 'Oracle aggregator',
+      value: shortAddress(String(deployment.data?.evm?.contracts?.OracleAggregator ?? '')),
+      href: null,
+    },
+    {
+      label: 'Work proof verifier',
+      value: shortAddress(String(deployment.data?.evm?.contracts?.WorkProofVerifier ?? '')),
+      href: null,
+    },
+  ];
+  const resourceHealth = [
+    {
+      title: 'Vault + stream',
+      status: vault.error ? 'Needs review' : 'Live',
+      tone: vault.error ? 'amber' : 'green',
+      detail: vault.error ?? `${formatFlow(vault.tokenBalance)} across salary, reserve, and unlocked yield lanes.`,
+    },
+    {
+      title: 'Automation graph',
+      status: rules.error ? 'Sync issue' : `${activeRules.length} active`,
+      tone: rules.error ? 'amber' : 'blue',
+      detail: rules.error ?? `${dcaRules.length} DCA, ${subscriptionRules.length} subscription, ${featureRules.length} treasury rules tracking ${streamId}.`,
+    },
+    {
+      title: 'Portfolio + oracle',
+      status: portfolio.error ? 'Needs review' : portfolio.data?.riskProfile ?? 'Live',
+      tone: portfolio.error ? 'amber' : 'purple',
+      detail:
+        portfolio.error ??
+        `Oracle ${shortAddress(String(deployment.data?.evm?.contracts?.OracleAggregator ?? ''))} with ${portfolio.data?.totalRebalances ?? 0} rebalances executed.`,
+    },
+    {
+      title: 'Rewards + identity',
+      status: credential.error ? 'Needs review' : 'Live',
+      tone: credential.error ? 'amber' : 'green',
+      detail:
+        credential.error ??
+        `${formatCompact(credential.data?.creditScore ?? 0)} credit score, ${giftCards.cards.length} gift cards, ${subscriptions.subscriptions.length} subscriptions.`,
+    },
+  ];
+  const relayStatusLabel = deployment.relayAvailable ? 'Online' : relayConfigured ? 'Reconnecting' : 'Not attached';
+  const relaySnapshotLabel = deployment.source === 'backend' ? 'Managed backend' : 'Deployment profile';
+  const operatorInitials = (accountWorkspace.displayName || 'FlowPilot Operator')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((segment) => segment[0]?.toUpperCase() ?? '')
+    .join('')
+    .slice(0, 2) || 'FP';
 
   function pushActivity(title: string, category: string, txId?: string | null, extra: Record<string, unknown> = {}) {
     setLocalActivity((current) => [
@@ -391,6 +552,46 @@ const App: React.FC = () => {
     }
   }
 
+  function handleSaveAccountWorkspace() {
+    const normalizedPayoutAddress =
+      safeNormalizeFlowAddress(accountWorkspace.payoutAddress) || accountWorkspace.payoutAddress;
+    const nextWorkspace = {
+      ...accountWorkspace,
+      payoutAddress: normalizedPayoutAddress,
+    };
+
+    setAccountWorkspace(nextWorkspace);
+    setGiftRecipient(normalizedPayoutAddress || seededAccount);
+    setSubscriptionPayee(normalizedPayoutAddress || seededAccount);
+
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(ACCOUNT_WORKSPACE_KEY, JSON.stringify(nextWorkspace));
+    }
+
+    setToast({ kind: 'success', message: 'Account workspace saved.' });
+  }
+
+  async function handleRefreshWorkspace() {
+    try {
+      setActionBusy('refresh');
+      await Promise.all([
+        deployment.refetch(),
+        vault.refetch(),
+        rules.refetch(),
+        lottery.refetch(),
+        giftCards.refetch(),
+        credential.refetch(),
+        portfolio.refetch(),
+        subscriptions.refetch(),
+      ]);
+      setToast({ kind: 'success', message: 'Live Flow state refreshed.' });
+    } catch (error) {
+      showError(error);
+    } finally {
+      setActionBusy(null);
+    }
+  }
+
   if (!seededAccount) {
     return (
       <div className="setup-shell">
@@ -433,16 +634,16 @@ const App: React.FC = () => {
         </div>
 
         <div className="sidebar-user">
-          <div className="user-avatar">FP</div>
+          <div className="user-avatar">{operatorInitials}</div>
           <div className="user-info">
-            <div className="user-name">Managed Flow Operator</div>
+            <div className="user-name">{accountWorkspace.displayName}</div>
             <div className="user-addr">{shortAddress(seededAccount)}</div>
           </div>
           <div className="status-dot" title="Live testnet session" />
         </div>
 
         <nav className="sidebar-nav">
-          {['Overview', 'Autopilot Rules', 'Features'].map((section) => (
+          {['Overview', 'Autopilot Rules', 'Features', 'Operations'].map((section) => (
             <React.Fragment key={section}>
               <div className="nav-section-label">{section}</div>
               {NAV_ITEMS.filter((item) => item.section === section).map((item) => (
@@ -481,16 +682,33 @@ const App: React.FC = () => {
             <div className="page-subtitle">{page.subtitle}</div>
           </div>
           <div className="topbar-right">
-            <button className="btn btn-ghost" onClick={() => setClaimOpen(true)}>
+            <button className="btn btn-ghost" disabled={relayUnavailable} title={actionHint} onClick={() => setClaimOpen(true)}>
               Withdraw Earnings
             </button>
-            <button className="btn btn-primary" onClick={() => setRuleOpen(true)}>
+            <button className="btn btn-primary" disabled={relayUnavailable} title={actionHint} onClick={() => setRuleOpen(true)}>
               Add Rule
             </button>
           </div>
         </div>
 
         <div className="content">
+          <div className={`mode-banner ${deployment.relayAvailable ? 'live' : 'degraded'}`}>
+            <div className="mode-copy">
+              <div className="mode-title">{modeTitle}</div>
+              <div className="mode-text">
+                {modeDescription}
+                {deployment.backendError ? ` Relay status: ${deployment.backendError}.` : ''}
+              </div>
+            </div>
+            <div className="mode-pills">
+              <span className={`badge ${deployment.relayAvailable ? 'blue' : 'amber'}`}>Relay {relayStatusLabel}</span>
+              <span className="badge purple">{relaySnapshotLabel}</span>
+              {deployment.data?.cadence?.seededAt ? (
+                <span className="badge blue">Seeded {relativeTime(deployment.data.cadence.seededAt)}</span>
+              ) : null}
+            </div>
+          </div>
+
           <div className="view-stack">
             {activeView === 'dashboard' ? (
               <>
@@ -503,7 +721,7 @@ const App: React.FC = () => {
                   <div className="stat-card amber">
                     <div className="stat-label">Yield Earned</div>
                     <div className="stat-value amber">{formatFlow(vault.yieldEarned)}</div>
-                    <div className="stat-sub">{formatPercent(credential.data?.averageAPY ?? 8.4)} average APY</div>
+                    <div className="stat-sub">{formatPercent(averageApy)} average APY</div>
                   </div>
                   <div className="stat-card blue">
                     <div className="stat-label">Active Rules</div>
@@ -514,6 +732,24 @@ const App: React.FC = () => {
                     <div className="stat-label">Savings Vault</div>
                     <div className="stat-value purple">{formatFlow(vault.yieldPrincipal)}</div>
                     <div className="stat-sub">Treasury float routed by autopilot</div>
+                  </div>
+                </div>
+
+                <div className="card">
+                  <div className="card-header">
+                    <div className="card-title">Platform Pillars</div>
+                    <span className="badge blue">Production surface</span>
+                  </div>
+                  <div className="card-body">
+                    <div className="feature-grid track-grid">
+                      {platformHighlights.map((signal) => (
+                        <div className={`feature-card track-card ${signal.tone}`} key={signal.title}>
+                          <div className="metric-title">{signal.title}</div>
+                          <div className="metric-sub strong">{signal.subtitle}</div>
+                          <div className="small-note track-proof">{signal.proof}</div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -592,7 +828,7 @@ const App: React.FC = () => {
                           <div className="progress-bar"><div className="progress-fill pf-amber" style={{ width: `${yieldShare}%` }} /></div>
                         </div>
                         <div className="key-value-list">
-                          <div className="key-value-row"><span>Last rebalance</span><span>{vault.lastRebalanceTimestamp ? new Date(vault.lastRebalanceTimestamp * 1000).toLocaleString() : 'Not yet'}</span></div>
+                          <div className="key-value-row"><span>Last rebalance</span><span>{vault.lastRebalanceTimestamp ? new Date(vault.lastRebalanceTimestamp * 1000).toLocaleString() : 'Unavailable'}</span></div>
                           <div className="key-value-row"><span>Yield harvest lock</span><span>{vault.yieldLocked ? 'Locked' : 'Open'}</span></div>
                           <div className="key-value-row"><span>Milestone dispute</span><span>{vault.milestoneDisputed ? 'Raised' : 'Clear'}</span></div>
                         </div>
@@ -602,7 +838,7 @@ const App: React.FC = () => {
                     <div className="lottery-hero">
                       <div className="stat-label">Lossless Lottery Pool</div>
                       <div className="lottery-jackpot">{formatFlow(lottery.data?.yieldAccumulated ?? 0)}</div>
-                      <div className="lottery-apy"><span className="apy-badge">{formatPercent(credential.data?.averageAPY ?? 8.4)}</span>funding the next prize draw</div>
+                      <div className="lottery-apy"><span className="apy-badge">{formatPercent(averageApy)}</span>funding the next prize draw</div>
                       <div className="countdown">
                         <div className="cd-block"><div className="cd-num">{countdown.hours}</div><div className="cd-unit">hrs</div></div>
                         <div className="cd-block"><div className="cd-num">{countdown.minutes}</div><div className="cd-unit">min</div></div>
@@ -627,6 +863,28 @@ const App: React.FC = () => {
                             <div className="activity-meta">{item.category} · {relativeTime(String(item.timestamp))}</div>
                           </div>
                           {item.explorerUrl ? <a className="link" href={String(item.explorerUrl)} target="_blank" rel="noreferrer">View tx</a> : null}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="card">
+                  <div className="card-header">
+                    <div className="card-title">Network References</div>
+                    <span className="badge purple">Deployed</span>
+                  </div>
+                  <div className="card-body">
+                    <div className="feature-grid proof-grid">
+                      {networkReferences.map((reference) => (
+                        <div className="feature-card" key={reference.label}>
+                          <div className="metric-title">{reference.label}</div>
+                          <div className="metric-sub strong">{reference.value}</div>
+                          {reference.href ? (
+                            <a className="link" href={reference.href} target="_blank" rel="noreferrer">
+                              Open explorer
+                            </a>
+                          ) : null}
                         </div>
                       ))}
                     </div>
@@ -668,16 +926,13 @@ const App: React.FC = () => {
                       <div className="card-body">
                         <div>
                           <div className="metric-row"><span>Salary accrual</span><span>{formatFlow(vault.salaryAccrued)}</span></div>
-                          <div className="progress-bar"><div className="progress-fill pf-green" style={{ width: `${clamp((vault.salaryAccrued / Math.max(vault.tokenBalance, 1)) * 100)}%` }} /></div>
-                        </div>
+                          <div className="progress-bar"><div className="progress-fill pf-green" style={{ width: `${clamp((vault.salaryAccrued / Math.max(vault.tokenBalance, 1)) * 100)}%` }} /></div></div>
                         <div>
                           <div className="metric-row"><span>Savings reserve</span><span>{formatFlow(vault.yieldPrincipal)}</span></div>
-                          <div className="progress-bar"><div className="progress-fill pf-blue" style={{ width: `${savingsShare}%` }} /></div>
-                        </div>
+                          <div className="progress-bar"><div className="progress-fill pf-blue" style={{ width: `${savingsShare}%` }} /></div></div>
                         <div>
                           <div className="metric-row"><span>Unlocked yield</span><span>{formatFlow(vault.yieldEarned)}</span></div>
-                          <div className="progress-bar"><div className="progress-fill pf-amber" style={{ width: `${yieldShare}%` }} /></div>
-                        </div>
+                          <div className="progress-bar"><div className="progress-fill pf-amber" style={{ width: `${yieldShare}%` }} /></div></div>
                       </div>
                     </div>
 
@@ -702,7 +957,7 @@ const App: React.FC = () => {
                 <div className="card">
                   <div className="card-header">
                     <div className="card-title">Active Rules ({activeRules.length})</div>
-                    <button className="btn btn-primary" onClick={() => setRuleOpen(true)}>+ Add Rule</button>
+                    <button className="btn btn-primary" disabled={relayUnavailable} title={actionHint} onClick={() => setRuleOpen(true)}>+ Add Rule</button>
                   </div>
                   <div className="card-body compact">
                     <div className="rules-list">
@@ -715,6 +970,7 @@ const App: React.FC = () => {
                           <span className="rule-status rs-active"><span className="rs-dot" />On-chain</span>
                         </div>
                       ))}
+                      {!activeRules.length ? <div className="empty-state">No rules deployed yet.</div> : null}
                     </div>
                   </div>
                 </div>
@@ -728,10 +984,13 @@ const App: React.FC = () => {
                       <div className="feature-card">
                         <div className="metric-title">Compiler preview</div>
                         <div className="metric-sub">{String(rulePreview.description ?? 'Structured output ready')}</div>
+                        {String(rulePreview.source ?? '') === 'local-parser' ? (
+                          <div className="small-note">Preview generated by the local parser while the managed compiler reconnects.</div>
+                        ) : null}
                         <div className="small-note">{JSON.stringify(rulePreview.rule ?? {}, null, 2)}</div>
                       </div>
                     ) : null}
-                    <button className="btn btn-primary btn-block" onClick={() => setRuleOpen(true)}>Deploy This Rule</button>
+                    <button className="btn btn-primary btn-block" disabled={relayUnavailable} title={actionHint} onClick={() => setRuleOpen(true)}>Deploy This Rule</button>
                   </div>
                 </div>
               </div>
@@ -740,7 +999,7 @@ const App: React.FC = () => {
             {activeView === 'yield' ? (
               <>
                 <div className="stats-grid">
-                  <div className="stat-card amber"><div className="stat-label">Operator APY</div><div className="stat-value amber">{formatPercent(credential.data?.averageAPY ?? 0)}</div><div className="stat-sub">Derived from live credential history</div></div>
+                  <div className="stat-card amber"><div className="stat-label">Operator APY</div><div className="stat-value amber">{formatPercent(averageApy)}</div><div className="stat-sub">Derived from live credential history</div></div>
                   <div className="stat-card blue"><div className="stat-label">Yield Principal</div><div className="stat-value blue">{formatFlow(vault.yieldPrincipal)}</div><div className="stat-sub">Float routed into reserve strategies</div></div>
                   <div className="stat-card green"><div className="stat-label">Yield Earned</div><div className="stat-value green">{formatFlow(vault.yieldEarned)}</div><div className="stat-sub">Unlocked and available to claim</div></div>
                   <div className="stat-card purple"><div className="stat-label">Treasury Efficiency</div><div className="stat-value purple">{formatPercent(clamp((vault.yieldEarned / Math.max(vault.yieldPrincipal, 1)) * 100, 0, 1000))}</div><div className="stat-sub">Yield versus principal buffer</div></div>
@@ -768,7 +1027,7 @@ const App: React.FC = () => {
                         {Object.entries(deployment.data?.cadence?.surfacedFeatures ?? {}).map(([feature, enabled]) => (
                           <div className="feature-card" key={feature}>
                             <div className="metric-title">{feature}</div>
-                            <div className="metric-sub">{enabled ? 'Enabled in the managed testnet environment' : 'Disabled'}</div>
+                            <div className="metric-sub">{enabled ? 'Enabled in the current deployment' : 'Disabled'}</div>
                           </div>
                         ))}
                       </div>
@@ -788,12 +1047,12 @@ const App: React.FC = () => {
                         <div className="rule-item" key={rule.id}>
                           <div className="rule-copy">
                             <div className="rule-title">{rule.rawText ?? 'DCA rule'}</div>
-                            <div className="rule-text">Amount: {String(rule.params.amount ?? '0')} · Asset: {String(rule.params.toAsset ?? 'FLOW')}</div>
+                            <div className="rule-text">Amount: {String(rule.params.amount ?? 0)} · Asset: {String(rule.params.toAsset ?? rule.params.asset ?? 'FLOW')}</div>
                           </div>
                           <span className="badge blue">weekly</span>
                         </div>
                       ))}
-                      {!dcaRules.length ? <div className="empty-state">No DCA rules found yet.</div> : null}
+                      {!dcaRules.length ? <div className="empty-state">No DCA rules are active yet.</div> : null}
                     </div>
                   </div>
                 </div>
@@ -803,9 +1062,7 @@ const App: React.FC = () => {
                     <div className="metric-card">
                       <div className="metric-title">Estimated recurring FLOW allocation</div>
                       <div className="metric-value blue">
-                        {formatFlow(
-                          dcaRules.reduce((sum, rule) => sum + Number(rule.params.amount ?? 0) * 4, 0)
-                        )}
+                        {formatFlow(dcaRules.reduce((sum, rule) => sum + Number(rule.params.amount ?? 0) * 4, 0))}
                       </div>
                       <div className="metric-sub">Assumes weekly cadence for the currently deployed DCA rules.</div>
                     </div>
@@ -817,22 +1074,27 @@ const App: React.FC = () => {
             {activeView === 'portfolio' ? (
               <div className="grid-2">
                 <div className="card">
-                  <div className="card-header"><div className="card-title">Live Allocation Targets</div><span className="badge purple">{portfolio.data?.riskProfile ?? 'unavailable'}</span></div>
+                  <div className="card-header"><div className="card-title">Live Allocation Targets</div><span className="badge purple">{portfolio.data?.riskProfile ?? 'Unavailable'}</span></div>
                   <div className="card-body compact">
-                    <div className="asset-list">
-                      {Object.entries(portfolio.data?.allocations ?? {}).map(([asset, percentage]) => (
-                        <div className="asset-row" key={asset}>
-                          <div className="asset-copy">
-                            <div className="asset-title">{asset}</div>
-                            <div className="asset-meta">Target allocation</div>
+                    {portfolioId ? (
+                      <div className="asset-list">
+                        {Object.entries(portfolio.data?.allocations ?? {}).map(([asset, percentage]) => (
+                          <div className="asset-row" key={asset}>
+                            <div className="asset-copy">
+                              <div className="asset-title">{asset}</div>
+                              <div className="asset-meta">Target allocation</div>
+                            </div>
+                            <div style={{ minWidth: 160 }}>
+                              <div className="metric-row"><span>{percentage}</span><span>{portfolio.data?.holdings?.[asset] ?? '0'} held</span></div>
+                              <div className="progress-bar"><div className="progress-fill pf-purple" style={{ width: `${clamp(parseFloat(String(percentage)))}%` }} /></div>
+                            </div>
                           </div>
-                          <div style={{ minWidth: 160 }}>
-                            <div className="metric-row"><span>{percentage}</span><span>{portfolio.data?.holdings?.[asset] ?? '0.0'} held</span></div>
-                            <div className="progress-bar"><div className="progress-fill pf-purple" style={{ width: `${clamp(parseFloat(String(percentage)))}%` }} /></div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                        {!Object.keys(portfolio.data?.allocations ?? {}).length ? <div className="empty-state">Portfolio allocations are not available yet.</div> : null}
+                      </div>
+                    ) : (
+                      <div className="empty-state">No live portfolio ID is configured for this deployment.</div>
+                    )}
                   </div>
                 </div>
 
@@ -843,7 +1105,7 @@ const App: React.FC = () => {
                       <div className="key-value-row"><span>OracleAggregator</span><span className="mono">{shortAddress(String(deployment.data?.evm?.contracts?.OracleAggregator ?? ''))}</span></div>
                       <div className="key-value-row"><span>Portfolio signal</span><span className="mono">{shortAddress(String(oraclePortfolioId ?? ''))}</span></div>
                       <div className="key-value-row"><span>Rebalances</span><span>{portfolio.data?.totalRebalances ?? 0}</span></div>
-                      <div className="key-value-row"><span>Last rebalance</span><span>{portfolio.data?.lastRebalanceTimestamp ? new Date(portfolio.data.lastRebalanceTimestamp * 1000).toLocaleString() : 'Not yet'}</span></div>
+                      <div className="key-value-row"><span>Last rebalance</span><span>{portfolio.data?.lastRebalanceTimestamp ? new Date(portfolio.data.lastRebalanceTimestamp * 1000).toLocaleString() : 'Unavailable'}</span></div>
                     </div>
                   </div>
                 </div>
@@ -865,7 +1127,7 @@ const App: React.FC = () => {
                           <span className={`badge ${subscription.dueNow ? 'amber' : 'blue'}`}>{subscription.dueNow ? 'Due' : 'Active'}</span>
                         </div>
                       ))}
-                      {!subscriptions.subscriptions.length ? <div className="empty-state">No live subscriptions published yet.</div> : null}
+                      {!subscriptions.subscriptions.length ? <div className="empty-state">No live subscriptions are published yet.</div> : null}
                     </div>
                   </div>
                 </div>
@@ -891,7 +1153,8 @@ const App: React.FC = () => {
                         <input className="input" value={subscriptionDescription} onChange={(event) => setSubscriptionDescription(event.target.value)} />
                       </label>
                     </div>
-                    <button className="btn btn-primary btn-block" disabled={actionBusy === 'subscription'} onClick={handleCreateSubscription}>Create recurring payment</button>
+                    {relayUnavailable ? <div className="empty-state">Recurring payouts are ready; publishing new subscriptions resumes as soon as the transaction relay is available.</div> : null}
+                    <button className="btn btn-primary btn-block" disabled={relayUnavailable || actionBusy === 'subscription'} title={actionHint} onClick={handleCreateSubscription}>Create recurring payment</button>
                   </div>
                 </div>
               </div>
@@ -921,8 +1184,8 @@ const App: React.FC = () => {
                       </div>
                       <div className="inline-actions">
                         <input className="input" value={lotteryAmount} onChange={(event) => setLotteryAmount(event.target.value)} />
-                        <button className="btn btn-primary" disabled={actionBusy === 'lottery-deposit'} onClick={handleLotteryDeposit}>Deposit</button>
-                        <button className="btn btn-ghost" disabled={actionBusy === 'lottery-draw'} onClick={handleLotteryDraw}>Draw now</button>
+                        <button className="btn btn-primary" disabled={relayUnavailable || actionBusy === 'lottery-deposit'} title={actionHint} onClick={handleLotteryDeposit}>Deposit</button>
+                        <button className="btn btn-ghost" disabled={relayUnavailable || actionBusy === 'lottery-draw'} title={actionHint} onClick={handleLotteryDraw}>Draw now</button>
                       </div>
                     </div>
                   </div>
@@ -966,7 +1229,8 @@ const App: React.FC = () => {
                         <textarea className="textarea" value={giftMessage} onChange={(event) => setGiftMessage(event.target.value)} />
                       </label>
                     </div>
-                    <button className="btn btn-primary btn-block" disabled={actionBusy === 'gift-mint'} onClick={handleMintGiftCard}>Mint gift card</button>
+                    {relayUnavailable ? <div className="empty-state">Gift-card issuance is paused until the transaction relay reconnects.</div> : null}
+                    <button className="btn btn-primary btn-block" disabled={relayUnavailable || actionBusy === 'gift-mint'} title={actionHint} onClick={handleMintGiftCard}>Mint gift card</button>
                   </div>
                 </div>
 
@@ -980,10 +1244,10 @@ const App: React.FC = () => {
                             <div className="gift-title">#{card.id} · {card.message}</div>
                             <div className="gift-meta">Principal {formatFlow(card.principalAmount)} · Total {formatFlow(card.totalValue)} · Recipient {shortAddress(card.recipient)}</div>
                           </div>
-                          <button className="btn btn-ghost" disabled={actionBusy === `gift-${card.id}`} onClick={() => handleRedeemGiftCard(card.id)}>Redeem</button>
+                          <button className="btn btn-ghost" disabled={relayUnavailable || actionBusy === `gift-${card.id}`} title={actionHint} onClick={() => handleRedeemGiftCard(card.id)}>Redeem</button>
                         </div>
                       ))}
-                      {!giftCards.cards.length ? <div className="empty-state">No gift cards found in the managed collection yet.</div> : null}
+                      {!giftCards.cards.length ? <div className="empty-state">No gift cards are available in the current collection.</div> : null}
                     </div>
                   </div>
                 </div>
@@ -1008,11 +1272,159 @@ const App: React.FC = () => {
                   <div className="card-header"><div className="card-title">Identity Snapshot</div></div>
                   <div className="card-body">
                     <div className="key-value-list">
-                      <div className="key-value-row"><span>Role</span><span>{credential.data?.role ?? 'Autonomous operator'}</span></div>
+                      <div className="key-value-row"><span>Role</span><span>{credential.data?.role || 'Unavailable'}</span></div>
                       <div className="key-value-row"><span>Employer</span><span className="mono">{shortAddress(credential.data?.employer ?? '')}</span></div>
                       <div className="key-value-row"><span>Worker</span><span className="mono">{shortAddress(credential.data?.workerAddress ?? '')}</span></div>
                       <div className="key-value-row"><span>Milestones</span><span>{credential.data?.milestonesCompleted ?? 0}</span></div>
                       <div className="key-value-row"><span>Disputes</span><span>{credential.data?.disputesRaised ?? 0}</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {activeView === 'account' ? (
+              <div className="view-stack">
+                <div className="stats-grid">
+                  <div className="stat-card blue">
+                    <div className="stat-label">Relay status</div>
+                    <div className="stat-value blue">{relayStatusLabel}</div>
+                    <div className="stat-sub">{relayEndpoint || 'No public relay endpoint attached'}</div>
+                  </div>
+                  <div className="stat-card green">
+                    <div className="stat-label">Managed treasury</div>
+                    <div className="stat-value green">{formatFlow(vault.tokenBalance)}</div>
+                    <div className="stat-sub up">Live balance on Flow testnet</div>
+                  </div>
+                  <div className="stat-card amber">
+                    <div className="stat-label">Automation coverage</div>
+                    <div className="stat-value amber">{activeRules.length}</div>
+                    <div className="stat-sub">{subscriptions.subscriptions.length} subscriptions and {giftCards.cards.length} gift cards active</div>
+                  </div>
+                  <div className="stat-card purple">
+                    <div className="stat-label">Deployment source</div>
+                    <div className="stat-value purple">{relaySnapshotLabel}</div>
+                    <div className="stat-sub">{deployment.data?.generatedAt ? `Generated ${relativeTime(deployment.data.generatedAt)}` : 'Deployment metadata loaded'}</div>
+                  </div>
+                </div>
+
+                <div className="two-col">
+                  <div className="view-stack">
+                    <div className="card">
+                      <div className="card-header">
+                        <div className="card-title">Account Management</div>
+                        <span className="badge blue">Operator workspace</span>
+                      </div>
+                      <div className="card-body">
+                        <div className="form-grid">
+                          <label className="form-field">
+                            <span className="label">Display Name</span>
+                            <input className="input" value={accountWorkspace.displayName} onChange={(event) => setAccountWorkspace((current) => ({ ...current, displayName: event.target.value }))} />
+                          </label>
+                          <label className="form-field">
+                            <span className="label">Notification Channel</span>
+                            <input className="input" value={accountWorkspace.notificationChannel} onChange={(event) => setAccountWorkspace((current) => ({ ...current, notificationChannel: event.target.value }))} />
+                          </label>
+                          <label className="form-field">
+                            <span className="label">Payout Address</span>
+                            <input className="input" value={accountWorkspace.payoutAddress} onChange={(event) => setAccountWorkspace((current) => ({ ...current, payoutAddress: event.target.value }))} />
+                          </label>
+                          <label className="form-field">
+                            <span className="label">Auto-claim Threshold</span>
+                            <input className="input" value={accountWorkspace.autoClaimThreshold} onChange={(event) => setAccountWorkspace((current) => ({ ...current, autoClaimThreshold: event.target.value }))} />
+                          </label>
+                          <label className="form-field">
+                            <span className="label">Preferred Risk</span>
+                            <select className="select" value={accountWorkspace.preferredRisk} onChange={(event) => setAccountWorkspace((current) => ({ ...current, preferredRisk: event.target.value }))}>
+                              <option value="conservative">Conservative</option>
+                              <option value="moderate">Moderate</option>
+                              <option value="aggressive">Aggressive</option>
+                            </select>
+                          </label>
+                          <label className="form-field">
+                            <span className="label">Settlement Cadence</span>
+                            <select className="select" value={accountWorkspace.settlementCadence} onChange={(event) => setAccountWorkspace((current) => ({ ...current, settlementCadence: event.target.value }))}>
+                              <option value="daily">Daily</option>
+                              <option value="weekly">Weekly</option>
+                              <option value="monthly">Monthly</option>
+                            </select>
+                          </label>
+                          <label className="form-field full">
+                            <span className="label">Treasury Policy</span>
+                            <textarea className="textarea" value={accountWorkspace.treasuryPolicy} onChange={(event) => setAccountWorkspace((current) => ({ ...current, treasuryPolicy: event.target.value }))} />
+                          </label>
+                        </div>
+                        <div className="stack-actions">
+                          <button className="btn btn-primary" onClick={handleSaveAccountWorkspace}>Save workspace</button>
+                          <button className="btn btn-ghost" disabled={actionBusy === 'refresh'} onClick={handleRefreshWorkspace}>Refresh live state</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="card">
+                      <div className="card-header">
+                        <div className="card-title">Deployment Registry</div>
+                        <span className={`badge ${deployment.relayAvailable ? 'blue' : 'amber'}`}>{relayStatusLabel}</span>
+                      </div>
+                      <div className="card-body">
+                        <div className="key-value-list">
+                          <div className="key-value-row"><span>Managed account</span><span className="mono">{shortAddress(seededAccount)}</span></div>
+                          <div className="key-value-row"><span>Contract account</span><span className="mono">{shortAddress(deployment.data?.cadence?.contractAddress ?? seededAccount)}</span></div>
+                          <div className="key-value-row"><span>Stream ID</span><span className="mono">{streamId || 'Unavailable'}</span></div>
+                          <div className="key-value-row"><span>Lottery pool</span><span className="mono">{poolId || 'Unavailable'}</span></div>
+                          <div className="key-value-row"><span>Portfolio ID</span><span className="mono">{portfolioId || 'Unavailable'}</span></div>
+                          <div className="key-value-row"><span>OracleAggregator</span><span className="mono">{shortAddress(String(deployment.data?.evm?.contracts?.OracleAggregator ?? ''))}</span></div>
+                          <div className="key-value-row"><span>WorkProofVerifier</span><span className="mono">{shortAddress(String(deployment.data?.evm?.contracts?.WorkProofVerifier ?? ''))}</span></div>
+                          <div className="key-value-row"><span>Claimable tracked</span><span>{String(verificationSummary.claimableTotal ?? formatFlow(vault.claimableTotal))}</span></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="view-stack">
+                    <div className="card">
+                      <div className="card-header">
+                        <div className="card-title">Resource Health</div>
+                        <span className="badge purple">Live reads</span>
+                      </div>
+                      <div className="card-body">
+                        <div className="feature-grid account-resource-grid">
+                          {resourceHealth.map((resource) => (
+                            <div className={`feature-card resource-card ${resource.tone}`} key={resource.title}>
+                              <div className="resource-card-head">
+                                <div className="metric-title">{resource.title}</div>
+                                <span className={`badge ${resource.tone === 'green' ? '' : resource.tone}`.trim()}>{resource.status}</span>
+                              </div>
+                              <div className="metric-sub">{resource.detail}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="card">
+                      <div className="card-header">
+                        <div className="card-title">Operational Notes</div>
+                        <span className="badge blue">Current environment</span>
+                      </div>
+                      <div className="card-body">
+                        <div className="empty-state">
+                          FlowPilot is connected to deployed Flow testnet resources for portfolio, lottery, subscription, vault, credential, and gift-card reads. Sponsored writes appear automatically once the relay endpoint becomes available in this environment.
+                        </div>
+                        <div className="feature-grid proof-grid">
+                          {networkReferences.map((reference) => (
+                            <div className="feature-card" key={reference.label}>
+                              <div className="metric-title">{reference.label}</div>
+                              <div className="metric-sub strong">{reference.value}</div>
+                              {reference.href ? (
+                                <a className="link" href={reference.href} target="_blank" rel="noreferrer">
+                                  Open explorer
+                                </a>
+                              ) : null}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1031,9 +1443,13 @@ const App: React.FC = () => {
                 <span className="label">Amount</span>
                 <input className="input" value={claimAmount} onChange={(event) => setClaimAmount(event.target.value)} />
               </label>
-              <div className="empty-state">Managed signer mode is active. This will submit a sponsored testnet transaction from the seeded account.</div>
+              <div className="empty-state">
+                {relayUnavailable
+                  ? 'Live balances are synchronized. Claim submission resumes automatically when the transaction relay is available.'
+                  : 'Managed signer mode is active. This will submit a sponsored testnet transaction from the seeded account.'}
+              </div>
             </div>
-            <div className="modal-footer"><button className="btn btn-primary" disabled={actionBusy === 'claim'} onClick={handleClaim}>Submit claim</button></div>
+            <div className="modal-footer"><button className="btn btn-primary" disabled={relayUnavailable || actionBusy === 'claim'} title={actionHint} onClick={handleClaim}>Submit claim</button></div>
           </div>
         </div>
       ) : null}
@@ -1052,10 +1468,13 @@ const App: React.FC = () => {
                 <div className="feature-card">
                   <div className="metric-title">Preview</div>
                   <div className="metric-sub">{String(rulePreview.description ?? 'Ready to deploy')}</div>
+                  {String(rulePreview.source ?? '') === 'local-parser' ? (
+                    <div className="small-note">Preview generated by the local parser while the managed compiler reconnects.</div>
+                  ) : null}
                 </div>
               ) : null}
             </div>
-            <div className="modal-footer"><button className="btn btn-primary" disabled={actionBusy === 'rule'} onClick={handleCreateRule}>Deploy rule</button></div>
+            <div className="modal-footer"><button className="btn btn-primary" disabled={relayUnavailable || actionBusy === 'rule'} title={actionHint} onClick={handleCreateRule}>Deploy rule</button></div>
           </div>
         </div>
       ) : null}

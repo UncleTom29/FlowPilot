@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { syncFrontendDemoState } from './exportFrontendDemoState.mjs';
 import {
   DEPLOYMENTS_DIR,
   ROOT_DIR,
@@ -467,6 +468,8 @@ if (!cadenceOnly || seedOnly) {
 if (!cadenceOnly && !seedOnly) {
   evmDeployment = deployEvm();
 }
+
+syncFrontendDemoState();
 
 logStep('FlowPilot testnet bootstrap complete');
 console.log(

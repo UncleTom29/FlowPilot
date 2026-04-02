@@ -10,7 +10,10 @@
     "deploy:testnet:all": "node scripts/testnet/bootstrapTestnet.mjs",
     "deploy:evm": "npx hardhat run evm/scripts/deployOracle.ts --network flowTestnet",
     "seed:testnet": "node scripts/testnet/bootstrapTestnet.mjs --seed-only",
-    "test": "jest --testPathPattern=tests/",
+    "test": "PATH=\"/opt/homebrew/bin:$PATH\" jest --watchman=false --runInBand --testPathPattern=tests/",
+    "test:cadence": "FLOWPILOT_RUN_CADENCE_TESTS=1 PATH=\"/opt/homebrew/bin:$PATH\" jest --watchman=false --runInBand --testPathPattern=tests/(cadence|e2e)/",
+    "test:all": "FLOWPILOT_RUN_CADENCE_TESTS=1 PATH=\"/opt/homebrew/bin:$PATH\" jest --watchman=false --runInBand --testPathPattern=tests/",
+    "sync:demo-state": "node scripts/testnet/exportFrontendDemoState.mjs",
     "emulator": "flow emulator start"
   },
   "devDependencies": {

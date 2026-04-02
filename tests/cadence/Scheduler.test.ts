@@ -14,8 +14,9 @@ import {
   emulator,
 } from '@onflow/flow-js-testing';
 import * as path from 'path';
+import { describeCadenceSuite, stopEmulatorSafely } from '../helpers/flowCliSupport';
 
-describe('VaultStateRegister + Scheduler Handlers', () => {
+describeCadenceSuite('VaultStateRegister + Scheduler Handlers', () => {
   let deployer: string;
   let worker: string;
   let streamId: string;
@@ -49,7 +50,7 @@ describe('VaultStateRegister + Scheduler Handlers', () => {
   });
 
   afterAll(async () => {
-    await emulator.stop();
+    await stopEmulatorSafely(emulator);
   });
 
   describe('StateRegister', () => {

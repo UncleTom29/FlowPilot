@@ -14,8 +14,9 @@ import {
   emulator,
 } from '@onflow/flow-js-testing';
 import * as path from 'path';
+import { describeCadenceSuite, stopEmulatorSafely } from '../helpers/flowCliSupport';
 
-describe('FlowPilot Full E2E Flow', () => {
+describeCadenceSuite('FlowPilot Full E2E Flow', () => {
   let employer: string;
   let worker: string;
   let friend: string;
@@ -60,7 +61,7 @@ describe('FlowPilot Full E2E Flow', () => {
   });
 
   afterAll(async () => {
-    await emulator.stop();
+    await stopEmulatorSafely(emulator);
   });
 
   /**

@@ -15,6 +15,7 @@ typechain-types/
 .env
 .env.local
 .env.*.local
+frontend/.vercel/
 
 # Flow emulator
 flow.db/

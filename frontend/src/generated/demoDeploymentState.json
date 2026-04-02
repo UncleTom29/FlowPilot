@@ -1,0 +1,171 @@
+{
+  "cadence": {
+    "accountAddress": "0x64e0bc9e9ae74ab9",
+    "contractAddress": "0x64e0bc9e9ae74ab9",
+    "streamId": "default",
+    "poolId": "primary-pool",
+    "portfolioId": "core-portfolio",
+    "subscriptionId": "subscription_1775009952058",
+    "seededAt": "2026-04-01T02:22:18.923Z",
+    "activity": [
+      {
+        "title": "Initialized autonomous payroll stream",
+        "category": "stream",
+        "txId": null,
+        "explorerUrl": null,
+        "timestamp": "2026-04-01T02:19:24.127Z",
+        "streamId": "default"
+      },
+      {
+        "title": "Harvested yield and advanced dashboard balances",
+        "category": "yield",
+        "txId": "144cfb987419cc5fd38907d6e92b2c6c3d13ae5820e804f9468fec22cc7ea50a",
+        "explorerUrl": "https://testnet.flowscan.io/transaction/144cfb987419cc5fd38907d6e92b2c6c3d13ae5820e804f9468fec22cc7ea50a",
+        "timestamp": "2026-04-01T02:19:35.908Z",
+        "streamId": "default"
+      },
+      {
+        "title": "Activated reserve autopilot",
+        "category": "rule",
+        "txId": "daa9e074c5d1398cab26a80a34d3865301d5bf94878131483adf0189096567bc",
+        "explorerUrl": "https://testnet.flowscan.io/transaction/daa9e074c5d1398cab26a80a34d3865301d5bf94878131483adf0189096567bc",
+        "timestamp": "2026-04-01T02:19:46.273Z",
+        "ruleId": "rule_savings_1775009975908"
+      },
+      {
+        "title": "Started weekly FLOW DCA",
+        "category": "rule",
+        "txId": "84ac45363ab128ec3ed6f0893920f6cc580b135151f0db3dcb1ce50d419118f9",
+        "explorerUrl": "https://testnet.flowscan.io/transaction/84ac45363ab128ec3ed6f0893920f6cc580b135151f0db3dcb1ce50d419118f9",
+        "timestamp": "2026-04-01T02:19:58.193Z",
+        "ruleId": "rule_dca_1775009975908"
+      },
+      {
+        "title": "Registered monthly treasury membership",
+        "category": "rule",
+        "txId": "d5ad0323d8460f245f83109ecde2bb973ac2dd114974a2d9345c106e69365518",
+        "explorerUrl": "https://testnet.flowscan.io/transaction/d5ad0323d8460f245f83109ecde2bb973ac2dd114974a2d9345c106e69365518",
+        "timestamp": "2026-04-01T02:20:08.693Z",
+        "ruleId": "rule_subscription_1775009975908"
+      },
+      {
+        "title": "Enabled roundup reserve",
+        "category": "rule",
+        "txId": "664c52e01fc29a2e82cb8a28a6709827f026179529804fe1b328ba68c7acaf50",
+        "explorerUrl": "https://testnet.flowscan.io/transaction/664c52e01fc29a2e82cb8a28a6709827f026179529804fe1b328ba68c7acaf50",
+        "timestamp": "2026-04-01T02:20:20.656Z",
+        "ruleId": "rule_roundup_1775009975908"
+      },
+      {
+        "title": "Pinned AI portfolio guardrails",
+        "category": "rule",
+        "txId": "154d81df7aa7a21ccdd039a32089d84191c743b0479dc3c4971c1033464b19ef",
+        "explorerUrl": "https://testnet.flowscan.io/transaction/154d81df7aa7a21ccdd039a32089d84191c743b0479dc3c4971c1033464b19ef",
+        "timestamp": "2026-04-01T02:20:32.146Z",
+        "ruleId": "rule_portfolio_1775009975908"
+      },
+      {
+        "title": "Provisioned lossless lottery pool",
+        "category": "lottery",
+        "txId": null,
+        "explorerUrl": null,
+        "timestamp": "2026-04-01T02:20:46.359Z",
+        "poolId": "primary-pool"
+      },
+      {
+        "title": "Deposited FLOW into the lottery pool",
+        "category": "lottery",
+        "txId": "0fcc95f5beb8b42949a50e75f590e362a884b776d6bfe2d62e95be94dd4bb86d",
+        "explorerUrl": "https://testnet.flowscan.io/transaction/0fcc95f5beb8b42949a50e75f590e362a884b776d6bfe2d62e95be94dd4bb86d",
+        "timestamp": "2026-04-01T02:20:58.204Z",
+        "poolId": "primary-pool"
+      },
+      {
+        "title": "Seeded the lottery prize vault",
+        "category": "lottery",
+        "txId": "4097e445b0f0de2e3fe47ddbaa4d3fe085fc02b5e55a50dc1d737493a68689b6",
+        "explorerUrl": "https://testnet.flowscan.io/transaction/4097e445b0f0de2e3fe47ddbaa4d3fe085fc02b5e55a50dc1d737493a68689b6",
+        "timestamp": "2026-04-01T02:21:08.672Z",
+        "poolId": "primary-pool"
+      },
+      {
+        "title": "Closed a live lottery round on testnet",
+        "category": "lottery",
+        "txId": "6956fde128cfbdc12eb92ae3a1ce39c1f67bda1dea6e35b0b1520e2d107dfcc6",
+        "explorerUrl": "https://testnet.flowscan.io/transaction/6956fde128cfbdc12eb92ae3a1ce39c1f67bda1dea6e35b0b1520e2d107dfcc6",
+        "timestamp": "2026-04-01T02:21:20.378Z",
+        "poolId": "primary-pool"
+      },
+      {
+        "title": "Reloaded the next lottery jackpot",
+        "category": "lottery",
+        "txId": "65a221fda129d681f6a1bcc38ec9a04846ead66ad9114e26bc4c30e958b6e3fd",
+        "explorerUrl": "https://testnet.flowscan.io/transaction/65a221fda129d681f6a1bcc38ec9a04846ead66ad9114e26bc4c30e958b6e3fd",
+        "timestamp": "2026-04-01T02:21:32.466Z",
+        "poolId": "primary-pool"
+      },
+      {
+        "title": "Opened AI-managed treasury portfolio",
+        "category": "portfolio",
+        "txId": null,
+        "explorerUrl": null,
+        "timestamp": "2026-04-01T02:21:45.619Z",
+        "portfolioId": "core-portfolio"
+      },
+      {
+        "title": "Created recurring subscription stream",
+        "category": "subscription",
+        "txId": "31189ca61d86b50cb14c92477bb95c375d69efa14c594b860879ad36ef002579",
+        "explorerUrl": "https://testnet.flowscan.io/transaction/31189ca61d86b50cb14c92477bb95c375d69efa14c594b860879ad36ef002579",
+        "timestamp": "2026-04-01T02:21:56.528Z",
+        "subscriptionId": "subscription_1775009952058"
+      },
+      {
+        "title": "Minted a yield-bearing milestone gift card",
+        "category": "giftcard",
+        "txId": "c7e6bf07f7d32a0c9b2ae37d5b8b8a4a9f4ac3b93109e745b9cf07587c07a57b",
+        "explorerUrl": "https://testnet.flowscan.io/transaction/c7e6bf07f7d32a0c9b2ae37d5b8b8a4a9f4ac3b93109e745b9cf07587c07a57b",
+        "timestamp": "2026-04-01T02:22:08.367Z",
+        "streamId": "default"
+      }
+    ],
+    "surfacedFeatures": {
+      "walletless": true,
+      "sponsoredTransactions": true,
+      "naturalLanguageRules": true,
+      "managedPortfolio": true,
+      "losslessLottery": true,
+      "yieldGiftCards": true
+    },
+    "verificationSummary": {
+      "claimableTotal": "12025.74400000",
+      "salaryAccrued": "12006.14400000",
+      "yieldPrincipal": "780.00000000",
+      "yieldEarned": "19.60000000",
+      "lotteryYieldAccumulated": null,
+      "lotteryParticipants": null,
+      "portfolioRiskProfile": null,
+      "creditScore": null,
+      "averageAPY": null
+    }
+  },
+  "evm": {
+    "seedData": {
+      "aiOracleAddress": "0x9f2EdCE3a34e42eaf8f965d4E14aDDd12Cf865f4",
+      "portfolioId": "0x299bef904247f4c6484226136c1be0b1ff34fd9aaf845a96c48d8b38e37088ba",
+      "workProof": {
+        "milestoneId": "0x2b0ae619e39ce8ae3f60f7e9baab57b46ecd6bc7e91edf25f1083b133e661b05",
+        "workHash": "0xf2524bcb158c8dc6871ceaca491c98ed125decba362460fc73e492219f9a5f64",
+        "worker": "0xE216c95E08d2ffc380b90Fc156E48d9C07e7BE3b",
+        "verified": true
+      }
+    },
+    "contracts": {
+      "OracleAggregator": "0x1A94475e85B4d32F85C4c5cfDC5663d6755BbcD9",
+      "WorkProofVerifier": "0xbd0dA4201dF1bc8D9E482Fb93B51DFA1b9CDC05a"
+    }
+  },
+  "signer": "flow-tester",
+  "ready": true,
+  "generatedAt": "2026-04-02T11:33:07.777Z"
+}

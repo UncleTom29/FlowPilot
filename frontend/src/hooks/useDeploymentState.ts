@@ -1,66 +1,115 @@
 import { useCallback, useEffect, useState } from 'react';
+import {
+  DEPLOYMENT_SNAPSHOT_STATE,
+  type DeploymentSource,
+  type DeploymentState,
+} from '../lib/deploymentState';
+import { getApiUrl, hasConfiguredBackend } from '../lib/runtimeConfig';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:3001';
+type HookState = {
+  data: DeploymentState | null;
+  loading: boolean;
+  error: string | null;
+  source: DeploymentSource | null;
+  relayAvailable: boolean;
+  backendError: string | null;
+};
 
-export interface ActivityItem {
-  title: string;
-  category: string;
-  txId?: string | null;
-  explorerUrl?: string | null;
-  timestamp: string;
-  [key: string]: unknown;
+function createSnapshotData(): DeploymentState | null {
+  if (!DEPLOYMENT_SNAPSHOT_STATE.ready) {
+    return null;
+  }
+
+  return {
+    ...DEPLOYMENT_SNAPSHOT_STATE,
+    cadence: DEPLOYMENT_SNAPSHOT_STATE.cadence
+      ? {
+          accountAddress: DEPLOYMENT_SNAPSHOT_STATE.cadence.accountAddress,
+          contractAddress: DEPLOYMENT_SNAPSHOT_STATE.cadence.contractAddress,
+          streamId: DEPLOYMENT_SNAPSHOT_STATE.cadence.streamId,
+          poolId: DEPLOYMENT_SNAPSHOT_STATE.cadence.poolId,
+          portfolioId: DEPLOYMENT_SNAPSHOT_STATE.cadence.portfolioId,
+          subscriptionId: DEPLOYMENT_SNAPSHOT_STATE.cadence.subscriptionId,
+          verificationSummary: DEPLOYMENT_SNAPSHOT_STATE.cadence.verificationSummary ?? {},
+        }
+      : null,
+    evm: DEPLOYMENT_SNAPSHOT_STATE.evm
+      ? {
+          contracts: DEPLOYMENT_SNAPSHOT_STATE.evm.contracts ?? {},
+        }
+      : null,
+    relayReady: false,
+  };
 }
 
-export interface DeploymentState {
-  cadence: {
-    accountAddress: string;
-    contractAddress: string;
-    streamId: string;
-    poolId?: string;
-    portfolioId?: string;
-    subscriptionId?: string;
-    activity?: ActivityItem[];
-    surfacedFeatures?: Record<string, boolean>;
-    verification?: Record<string, unknown>;
-  } | null;
-  evm: {
-    seedData?: Record<string, unknown>;
-    contracts?: Record<string, string>;
-  } | null;
-  signer: string;
-  ready: boolean;
+function createSnapshotState(backendError: string | null = null): HookState {
+  return {
+    data: createSnapshotData(),
+    loading: false,
+    error: DEPLOYMENT_SNAPSHOT_STATE.ready ? null : backendError,
+    source: DEPLOYMENT_SNAPSHOT_STATE.ready ? 'snapshot' : null,
+    relayAvailable: false,
+    backendError,
+  };
 }
 
 export function useDeploymentState() {
-  const [state, setState] = useState<{
-    data: DeploymentState | null;
-    loading: boolean;
-    error: string | null;
-  }>({
-    data: null,
-    loading: true,
-    error: null,
-  });
+  const [state, setState] = useState<HookState>(() =>
+    hasConfiguredBackend() ? {
+      data: null,
+      loading: true,
+      error: null,
+      source: null,
+      relayAvailable: false,
+      backendError: null,
+    } : createSnapshotState()
+  );
 
   const fetchState = useCallback(async () => {
+    if (!hasConfiguredBackend()) {
+      setState(createSnapshotState());
+      return;
+    }
+
     try {
-      const response = await fetch(`${BACKEND_URL}/api/deployment-state`);
+      const response = await fetch(getApiUrl('/api/deployment-state'));
       const payload = await response.json();
-      if (!payload.success) {
+      if (!response.ok || !payload.success) {
         throw new Error(payload.error ?? 'Failed to load deployment state');
       }
-      setState({ data: payload.state as DeploymentState, loading: false, error: null });
-    } catch (error) {
+
       setState({
-        data: null,
+        data: payload.state as DeploymentState,
         loading: false,
-        error: error instanceof Error ? error.message : 'Failed to load deployment state',
+        error: null,
+        source: 'backend',
+        relayAvailable: Boolean((payload.state as DeploymentState).relayReady ?? true),
+        backendError: null,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to load deployment state';
+      setState((current) => {
+        if (current.data && current.source === 'backend') {
+          return {
+            ...current,
+            loading: false,
+            relayAvailable: false,
+            backendError: message,
+          };
+        }
+
+        return createSnapshotState(message);
       });
     }
   }, []);
 
   useEffect(() => {
     fetchState();
+
+    if (!hasConfiguredBackend()) {
+      return undefined;
+    }
+
     const interval = setInterval(fetchState, 15_000);
     return () => clearInterval(interval);
   }, [fetchState]);
