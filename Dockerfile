@@ -20,7 +20,7 @@ RUN npm ci
 
 COPY backend/src ./backend/src
 COPY cadence ./cadence
-COPY deployments ./deployments
+COPY frontend/src/generated ./frontend/src/generated
 COPY flow.json ./flow.json
 
 RUN npm run build --workspace=backend

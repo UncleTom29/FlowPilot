@@ -10,6 +10,13 @@ const execFileAsync = promisify(execFile);
 const ROOT_DIR = path.resolve(__dirname, '../..');
 const FLOW_CONFIG_PATH = path.join(ROOT_DIR, '.flow', 'testnet.flow.json');
 const DEPLOYMENTS_DIR = path.join(ROOT_DIR, 'deployments');
+const FRONTEND_DEPLOYMENT_SNAPSHOT_PATH = path.join(
+  ROOT_DIR,
+  'frontend',
+  'src',
+  'generated',
+  'demoDeploymentState.json'
+);
 const FLOW_BIN =
   process.env.FLOW_BIN ||
   (process.platform === 'darwin' ? '/opt/homebrew/bin/flow' : 'flow');
@@ -137,6 +144,14 @@ async function runFlow(args: string[]) {
   return assertSuccessfulFlowResult(parsed);
 }
 
+async function readJsonOrNull<T>(filePath: string): Promise<T | null> {
+  try {
+    return JSON.parse(await fs.readFile(filePath, 'utf8')) as T;
+  } catch {
+    return null;
+  }
+}
+
 async function withPreparedCadenceFile<T>(sourcePath: string, run: (preparedPath: string) => Promise<T>) {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'flowpilot-cadence-'));
   const preparedPath = path.join(tempDir, path.basename(sourcePath));
@@ -219,17 +234,28 @@ export async function sendInlineTransaction(
 
 export async function getDeploymentState() {
   const signer = await resolveDefaultSigner();
-  const [cadence, evm] = await Promise.all([
-    fs.readFile(path.join(DEPLOYMENTS_DIR, 'cadence-testnet.json'), 'utf8').then(JSON.parse).catch(() => null),
-    fs.readFile(path.join(DEPLOYMENTS_DIR, 'evm-deployments.json'), 'utf8').then(JSON.parse).catch(() => null),
+  const [cadenceDeployment, evmDeployment, snapshot] = await Promise.all([
+    readJsonOrNull<Record<string, unknown>>(path.join(DEPLOYMENTS_DIR, 'cadence-testnet.json')),
+    readJsonOrNull<Record<string, unknown>>(path.join(DEPLOYMENTS_DIR, 'evm-deployments.json')),
+    readJsonOrNull<{
+      cadence?: Record<string, unknown> | null;
+      evm?: Record<string, unknown> | null;
+      signer?: string;
+      ready?: boolean;
+      generatedAt?: string;
+    }>(FRONTEND_DEPLOYMENT_SNAPSHOT_PATH),
   ]);
+
+  const cadence = cadenceDeployment ?? snapshot?.cadence ?? null;
+  const evm = evmDeployment ?? snapshot?.evm ?? null;
 
   return {
     cadence,
     evm,
-    signer,
-    ready: Boolean(cadence),
+    signer: snapshot?.signer ?? signer,
+    ready: Boolean(cadence ?? snapshot?.ready),
     accessNode: FLOW_ACCESS_NODE,
     relayReady: Boolean(process.env.FLOW_TESTNET_ADDRESS && process.env.FLOW_TESTNET_KEY),
+    generatedAt: snapshot?.generatedAt,
   };
 }
