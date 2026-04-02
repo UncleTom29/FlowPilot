@@ -48,3 +48,4 @@ coverage/
 
 flow-tester.private.json
 flow-tester.private.json
+.vercel
