@@ -7,7 +7,6 @@ RUN apt-get update \
 RUN curl -fsSL https://storage.googleapis.com/flow-cli/install.sh | bash
 
 ENV PATH="/root/.local/bin:${PATH}"
-ENV NODE_ENV=production
 ENV PORT=10000
 
 WORKDIR /app
@@ -16,7 +15,7 @@ COPY package.json package-lock.json ./
 COPY backend/package.json backend/package.json
 COPY backend/tsconfig.json backend/tsconfig.json
 
-RUN npm ci
+RUN npm ci --include=dev
 
 COPY backend/src ./backend/src
 COPY cadence ./cadence
@@ -24,6 +23,8 @@ COPY frontend/src/generated ./frontend/src/generated
 COPY flow.json ./flow.json
 
 RUN npm run build --workspace=backend
+
+ENV NODE_ENV=production
 
 EXPOSE 10000
 
